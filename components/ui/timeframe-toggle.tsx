@@ -21,9 +21,9 @@ function TimeframeToggle({
 }: TimeframeToggleProps) {
   return (
     <ToggleGroup
-      value={value}
-      onValueChange={(newValue: string | null) => {
-        if (newValue) onValueChange(newValue as TimeframeValue)
+      value={[value]}
+      onValueChange={(newValues: string[]) => {
+        if (newValues.length > 0) onValueChange(newValues[0] as TimeframeValue)
       }}
       size="sm"
       spacing={2}
