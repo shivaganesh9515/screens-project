@@ -2,11 +2,11 @@
 
 ## Current Focus
 
-Phase 3 complete. Phase 4 (overview) is next.
+Phase 4 complete. Phase 5 (Pages Sweep) is next.
 
 ## Active Phase
 
-`phase-4-overview` — next in sequence for execution.
+`phase-4-overview` — completed.
 
 ## Phase Status
 
@@ -15,7 +15,7 @@ Phase 3 complete. Phase 4 (overview) is next.
 | 1 — Tokens | ✅ phase-1-PLAN.md (2 tasks, 2 files) | ✅ | ✅ phase-1-SUMMARY.md |
 | 2 — Shell | ✅ phase-2-PLAN.md (3 tasks, 3 files) | ✅ | ✅ phase-2-SUMMARY.md |
 | 3 — Primitives | ✅ PLAN.md (6 tasks, 3+ files) | ✅ | ✅ phase-3-SUMMARY.md |
-| 4 — Overview | ✅ PLAN.md (4 tasks, 6 files) | ❌ | ❌ |
+| 4 — Overview | ✅ PLAN.md (5 tasks, 7 files) | ✅ | ✅ 04-01-SUMMARY.md |
 | 5 — Pages Sweep | ✅ PLAN.md (18 tasks, 22 files) | ❌ | ❌ |
 | 6 — Motion | ✅ PLAN.md (5 tasks, 5 files) | ❌ | ❌ |
 
@@ -31,10 +31,13 @@ Phase 3 complete. Phase 4 (overview) is next.
 | BaseUI ToggleGroup API | Single-select uses array values — wrappers must adapt |
 | SectionCard pattern | Lightweight `<div>` wrapper, not compositing shadcn Card |
 | Recharts usage | Delegate to ChartContainer infrastructure for auto-sizing |
+| Phase 4 TrendPill API | Uses direction (up/down/neutral) not raw values — convert numeric trends |
+| Phase 4 Base UI Select | onChange passes `(value: string \| null, details)` — wrap with `(v) => v && handler(v)` |
+| Phase 4 lucide-react 0.510 | ArrowRightDown missing — use ArrowDownUp instead |
 
 ## Blockers
 
-None — all plans ready. Phase 3 complete.
+None — all plans ready. Phase 4 complete.
 
 ## Session
 
@@ -42,6 +45,7 @@ None — all plans ready. Phase 3 complete.
 |---------|-----------|-----------|----------|
 | 1       | Phase 2   | 2026-06-29 | ~5 min  |
 | 2       | Phase 3   | 2026-06-29 | ~12 min |
+| 3       | Phase 4   | 2026-06-29 | ~22 min |
 
 ## Notes
 
