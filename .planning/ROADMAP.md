@@ -28,9 +28,11 @@ Plans:
 
 ---
 
-### Phase 3: UI Primitives
+### Phase 3: UI Primitives ✅
 
 **Goal:** Build reusable StatCard, TrendPill, StatusPill, SectionCard, CapsuleInput, TimeframeToggle, ProgressBar, GradientAreaChart.
+
+**Completed:** 2026-06-29 — 9 component files created, TypeScript + build pass
 
 ---
 
@@ -56,9 +58,9 @@ Plans:
 
 | Phase | Status | Plans |
 |-------|--------|-------|
-| 1 — Tokens | Planning | 1 plan |
-| 2 — Shell | Planning | 1 plan |
-| 3 — Primitives | Not started | — |
-| 4 — Overview | Not started | — |
-| 5 — Sweep | Not started | — |
-| 6 — Polish | Not started | — |
+| 1 — Tokens | ✅ Planned (2 tasks, Wave 1) | 1 plan |
+| 2 — Shell | ✅ Planned (3 tasks, Wave 1) | 1 plan |
+| 3 — Primitives | ✅ Complete (9 files, all checks pass) | ✅ phase-3-SUMMARY.md |
+| 4 — Overview | ✅ Planned (4 tasks, Wave 1) | 1 plan |
+| 5 — Sweep | ✅ Planned (18 tasks, 7 sub-plans, Wave 1) | 1 plan |
+| 6 — Polish | ✅ Planned (5 tasks, Wave 1) | 1 plan |
