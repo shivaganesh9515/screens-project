@@ -21,6 +21,11 @@ Plans:
 
 **Goal:** Light sidebar + new top header with welcome message, capsule search, and utility cluster.
 
+**Plans:** 1 plan
+
+Plans:
+- [ ] `phase-2-PLAN.md` — Light sidebar rewrite (logo, nav sections, storage meter, collapse) + three-zone header (welcome, capsule search, notification cluster) + layout integration
+
 ---
 
 ### Phase 3: UI Primitives
@@ -52,7 +57,7 @@ Plans:
 | Phase | Status | Plans |
 |-------|--------|-------|
 | 1 — Tokens | Planning | 1 plan |
-| 2 — Shell | Not started | — |
+| 2 — Shell | Planning | 1 plan |
 | 3 — Primitives | Not started | — |
 | 4 — Overview | Not started | — |
 | 5 — Sweep | Not started | — |
