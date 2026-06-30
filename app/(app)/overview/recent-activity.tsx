@@ -6,6 +6,7 @@ import { formatRelativeTime } from "@/lib/utils";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusPill } from "@/components/ui/status-pill";
 import { StaggerWrapper } from "@/hooks/useStaggerAnimation";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface PlayLog {
   id: string;
@@ -39,10 +40,7 @@ export function RecentActivity({ playLogs }: RecentActivityProps) {
     <SectionCard title="Recent Activity" subtitle="Latest playback and screen events">
       <div className="max-h-[340px] overflow-y-auto">
         {activities.length === 0 ? (
-          <div className="py-10 text-center">
-            <Clock className="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
-            <p className="text-sm font-medium text-muted-foreground">No recent activity</p>
-          </div>
+          <EmptyState icon={Clock} title="No recent activity" className="py-10 border-0" />
         ) : (
           <div className="space-y-1">
             {activities.map((item, idx) => (

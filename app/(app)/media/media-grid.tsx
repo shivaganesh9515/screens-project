@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { formatFileSize, formatDuration } from "@/lib/utils";
 import { Search, Grid3X3, List, Trash2, Image as ImageIcon, Video, Film, LayoutGrid } from "lucide-react";
+import { StaggerWrapper } from "@/hooks/useStaggerAnimation";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface MediaItem { id: string; name: string; type: string; storage_path: string; thumbnail_path: string | null; duration_ms: number | null; size_bytes: number | null; folder: string | null; tags: string[] | null; created_at: string; }
 
@@ -67,15 +69,16 @@ export function MediaGrid({ mediaItems, folders, orgId }: { mediaItems: MediaIte
 
       {view === "grid" ? (
         filtered.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border py-20 text-center">
-            <ImageIcon className="mx-auto mb-3 h-12 w-12 text-muted-foreground/30" />
-            <p className="text-sm font-medium text-muted-foreground">No media found</p>
-            <p className="text-xs text-muted-foreground/60">Upload images or videos to get started</p>
-          </div>
+          <EmptyState
+            icon={ImageIcon}
+            title="No media found"
+            description="Upload images or videos to get started"
+          />
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {filtered.map((item) => (
-              <div key={item.id} className="group relative rounded-2xl bg-card shadow-card overflow-hidden transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5">
+            {filtered.map((item, idx) => (
+              <StaggerWrapper key={item.id} index={idx} itemsPerRow={5}>
+              <div className="group relative rounded-2xl bg-card shadow-card overflow-hidden transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5">
                 <div className="aspect-video bg-muted relative">
                   {item.type === "image" ? (
                     item.thumbnail_path ? (
@@ -100,6 +103,7 @@ export function MediaGrid({ mediaItems, folders, orgId }: { mediaItems: MediaIte
                   <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">{item.type === "video" ? "Video" : "Image"}{item.size_bytes && <> · {formatFileSize(item.size_bytes)}</>}</p>
                 </div>
               </div>
+              </StaggerWrapper>
             ))}
           </div>
         )

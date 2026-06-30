@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus, Trash2, Calendar as CalendarIcon } from "lucide-react";
 import { StaggerWrapper } from "@/hooks/useStaggerAnimation";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface Schedule { id: string; screen_id: string | null; group_id: string | null; playlist_id: string | null; template_id: string | null; is_default: boolean; priority: number; start_at: string | null; end_at: string | null; recurrence: { days?: number[]; time_start?: string; time_end?: string } | null; screens: { name: string } | null; screen_groups: { name: string } | null; playlists: { name: string } | null; templates: { name: string } | null; }
 interface Screen { id: string; name: string; }
@@ -93,7 +94,7 @@ export function ScheduleCalendar({ schedules, screens, playlists, templates, org
       <div className="space-y-3">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Active Schedule Rules</h3>
         {schedules.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border py-16 text-center"><CalendarIcon className="mx-auto mb-3 h-10 w-10 text-muted-foreground/30" /><p className="text-sm text-muted-foreground">No schedule rules yet</p></div>
+          <EmptyState icon={CalendarIcon} title="No schedule rules yet" />
         ) : (
           <div className="space-y-2">
             {schedules.map((schedule, idx) => (
