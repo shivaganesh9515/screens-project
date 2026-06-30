@@ -2,6 +2,8 @@
 
 import { Monitor, Wifi, WifiOff, Play } from "lucide-react";
 import { StatCard } from "@/components/ui/stat-card";
+import { StaggerWrapper } from "@/hooks/useStaggerAnimation";
+import { CountUp } from "@/hooks/useCountUp";
 
 interface AnalyticsCardsProps {
   totalScreens: number;
@@ -40,7 +42,12 @@ export function AnalyticsCards({
     variant: "subtle" as const,
   });
 
-  const cards = [
+  const cards: Array<{
+    icon: React.ReactNode;
+    label: string;
+    value: number;
+    trend: ReturnType<typeof trendToPill>;
+  }> = [
     {
       icon: <Monitor className="text-primary" />,
       label: "Total Screens",
@@ -62,7 +69,7 @@ export function AnalyticsCards({
     {
       icon: <Play className="text-emerald-500" />,
       label: "Active Content",
-      value: activeContent.toLocaleString(),
+      value: activeContent,
       trend: trendToPill(contentTrend, "vs last week"),
     },
   ];
@@ -70,18 +77,14 @@ export function AnalyticsCards({
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
       {cards.map((card, idx) => (
-        <div
-          key={card.label}
-          className="animate-slide-up"
-          style={{ animationDelay: `${idx * 80}ms` }}
-        >
+        <StaggerWrapper key={card.label} index={idx} itemsPerRow={4}>
           <StatCard
             icon={card.icon}
             label={card.label}
-            value={card.value}
+            value={<CountUp end={card.value} />}
             trend={card.trend}
           />
-        </div>
+        </StaggerWrapper>
       ))}
     </div>
   );

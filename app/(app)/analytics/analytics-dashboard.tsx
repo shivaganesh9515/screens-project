@@ -35,6 +35,8 @@ import {
   Table2,
   PieChart as PieChartIcon,
 } from "lucide-react";
+import { StaggerWrapper } from "@/hooks/useStaggerAnimation";
+import { CountUp } from "@/hooks/useCountUp";
 
 interface PlayLog {
   id: string;
@@ -331,44 +333,49 @@ export function AnalyticsDashboard({
 
       {/* KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((card) => (
-          <div
-            key={card.label}
-            className="group rounded-2xl bg-card p-5 shadow-card transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5"
-          >
-            <div className="flex items-start justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">{card.label}</p>
-                <p className="text-2xl font-bold tracking-tight text-card-foreground">{card.value}</p>
-                {card.change !== null && (
-                  <div className="flex items-center gap-1">
-                    {card.change > 0 ? (
-                      <TrendingUp className="h-3.5 w-3.5 text-success" />
-                    ) : card.change < 0 ? (
-                      <TrendingDown className="h-3.5 w-3.5 text-destructive" />
-                    ) : null}
-                    <span
-                      className={`text-xs font-medium ${
-                        card.change > 0
-                          ? "text-success"
-                          : card.change < 0
-                          ? "text-destructive"
-                          : "text-muted-foreground"
-                      }`}
-                    >
-                      {card.change > 0 ? "+" : ""}
-                      {card.change}% vs prev period
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div
-                className={`rounded-xl ${card.bg} p-3 transition-transform duration-200 group-hover:scale-110`}
-              >
-                <card.icon className={`h-5 w-5`} style={{ color: card.color }} />
+        {stats.map((card, idx) => (
+          <StaggerWrapper key={card.label} index={idx} itemsPerRow={4}>
+            <div className="group rounded-2xl bg-card p-5 shadow-card transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5">
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">{card.label}</p>
+                  {card.label === "Total Impressions" ? (
+                    <CountUp end={totalImpressions} className="text-2xl font-bold tracking-tight text-card-foreground" as="p" />
+                  ) : card.label === "Total Play Time" || card.label === "Avg. Duration" || card.label === "Active Screens" ? (
+                    <p className="text-2xl font-bold tracking-tight text-card-foreground">{card.value}</p>
+                  ) : (
+                    <p className="text-2xl font-bold tracking-tight text-card-foreground">{card.value}</p>
+                  )}
+                  {card.change !== null && (
+                    <div className="flex items-center gap-1">
+                      {card.change > 0 ? (
+                        <TrendingUp className="h-3.5 w-3.5 text-success" />
+                      ) : card.change < 0 ? (
+                        <TrendingDown className="h-3.5 w-3.5 text-destructive" />
+                      ) : null}
+                      <span
+                        className={`text-xs font-medium ${
+                          card.change > 0
+                            ? "text-success"
+                            : card.change < 0
+                            ? "text-destructive"
+                            : "text-muted-foreground"
+                        }`}
+                      >
+                        {card.change > 0 ? "+" : ""}
+                        {card.change}% vs prev period
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div
+                  className={`rounded-xl ${card.bg} p-3 transition-transform duration-200 group-hover:scale-110`}
+                >
+                  <card.icon className={`h-5 w-5`} style={{ color: card.color }} />
+                </div>
               </div>
             </div>
-          </div>
+          </StaggerWrapper>
         ))}
       </div>
 

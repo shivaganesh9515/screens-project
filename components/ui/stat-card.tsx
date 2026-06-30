@@ -7,7 +7,7 @@ import { TrendPill, type TrendPillProps } from "@/components/ui/trend-pill"
 interface StatCardProps {
   icon: React.ReactNode
   label: string
-  value: string | number
+  value: React.ReactNode
   trend?: TrendPillProps
   variant?: "default" | "hero"
   className?: string
