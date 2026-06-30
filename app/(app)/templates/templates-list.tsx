@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { StaggerWrapper } from "@/hooks/useStaggerAnimation";
 import { Layout, Plus, Trash2, Layers, Check } from "lucide-react";
 
 const presets = [
@@ -78,7 +79,8 @@ export function TemplatesList({ templates, orgId }: { templates: Template[]; org
       <div><h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Preset Layouts</h3>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {presets.map((preset, i) => (
-            <div key={preset.name} className="rounded-2xl bg-card p-5 shadow-card transition-all hover:shadow-card-hover hover:-translate-y-0.5">
+            <StaggerWrapper key={preset.name} index={i} itemsPerRow={3}>
+            <div className="rounded-2xl bg-card p-5 shadow-card transition-all hover:shadow-card-hover hover:-translate-y-0.5">
               <div className="flex items-start gap-4 mb-4">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-primary/5"><Layout className="h-5 w-5 text-primary" /></div>
                 <div><h3 className="font-semibold">{preset.name}</h3><p className="text-xs text-muted-foreground">{preset.description}</p></div>
@@ -88,6 +90,7 @@ export function TemplatesList({ templates, orgId }: { templates: Template[]; org
               </div>
               <Button variant="outline" size="sm" className="w-full rounded-xl" onClick={() => handleCreatePreset(i)} disabled={creating} type="button"><Plus className="mr-1 h-4 w-4" /> Use Template</Button>
             </div>
+            </StaggerWrapper>
           ))}
         </div>
       </div>
@@ -95,8 +98,9 @@ export function TemplatesList({ templates, orgId }: { templates: Template[]; org
       {templates.length > 0 && (
         <div><h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Your Templates</h3>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {templates.map((template) => (
-              <div key={template.id} className="group relative rounded-2xl bg-card p-5 shadow-card transition-all hover:shadow-card-hover hover:-translate-y-0.5">
+            {templates.map((template, idx) => (
+              <StaggerWrapper key={template.id} index={idx} itemsPerRow={3}>
+              <div className="group relative rounded-2xl bg-card p-5 shadow-card transition-all hover:shadow-card-hover hover:-translate-y-0.5">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-primary/5"><Layers className="h-5 w-5 text-primary" /></div>
@@ -105,9 +109,10 @@ export function TemplatesList({ templates, orgId }: { templates: Template[]; org
                   <Button variant="ghost" size="sm" onClick={() => handleDelete(template.id)} className="opacity-0 group-hover:opacity-100 h-8 w-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10" type="button"><Trash2 className="h-4 w-4" /></Button>
                 </div>
                 <div className="aspect-video rounded-xl bg-muted relative overflow-hidden">
-                  {(template.zones as any[]).map((zone: any) => (<div key={zone.id} className="absolute border-2 border-primary/40 bg-primary/8 rounded-lg" style={{ left: `${zone.x}%`, top: `${zone.y}%`, width: `${zone.w}%`, height: `${zone.h}%` }} />))}
+                  {(template.zones as any[]).map((zone: any) => (                  <div key={zone.id} className="absolute border-2 border-primary/40 bg-primary/8 rounded-lg" style={{ left: `${zone.x}%`, top: `${zone.y}%`, width: `${zone.w}%`, height: `${zone.h}%` }} />))}
                 </div>
               </div>
+              </StaggerWrapper>
             ))}
           </div>
         </div>

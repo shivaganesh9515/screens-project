@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus, Trash2, Calendar as CalendarIcon } from "lucide-react";
+import { StaggerWrapper } from "@/hooks/useStaggerAnimation";
 
 interface Schedule { id: string; screen_id: string | null; group_id: string | null; playlist_id: string | null; template_id: string | null; is_default: boolean; priority: number; start_at: string | null; end_at: string | null; recurrence: { days?: number[]; time_start?: string; time_end?: string } | null; screens: { name: string } | null; screen_groups: { name: string } | null; playlists: { name: string } | null; templates: { name: string } | null; }
 interface Screen { id: string; name: string; }
@@ -95,14 +96,16 @@ export function ScheduleCalendar({ schedules, screens, playlists, templates, org
           <div className="rounded-2xl border border-dashed border-border py-16 text-center"><CalendarIcon className="mx-auto mb-3 h-10 w-10 text-muted-foreground/30" /><p className="text-sm text-muted-foreground">No schedule rules yet</p></div>
         ) : (
           <div className="space-y-2">
-            {schedules.map((schedule) => (
-              <div key={schedule.id} className="flex items-center justify-between rounded-xl bg-card px-5 py-3.5 shadow-sm transition-all hover:shadow-card">
+            {schedules.map((schedule, idx) => (
+              <StaggerWrapper key={schedule.id} index={idx} itemsPerRow={1}>
+              <div className="flex items-center justify-between rounded-xl bg-card px-5 py-3.5 shadow-sm transition-all hover:shadow-card">
                 <div className="flex items-center gap-3">
                   <Badge variant={schedule.is_default ? "secondary" : "default"} className="rounded-lg">{schedule.is_default ? "Default" : "Scheduled"}</Badge>
                   <div><p className="text-sm font-medium">{schedule.playlists?.name ?? schedule.templates?.name ?? "Unknown"}</p><p className="text-xs text-muted-foreground">{schedule.screens?.name ?? schedule.screen_groups?.name ?? "All"} · Priority {schedule.priority}</p></div>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => handleDelete(schedule.id)} className="h-8 w-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button>
               </div>
+              </StaggerWrapper>
             ))}
           </div>
         )}

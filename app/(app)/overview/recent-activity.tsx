@@ -5,6 +5,7 @@ import { Monitor, Clock, Play } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusPill } from "@/components/ui/status-pill";
+import { StaggerWrapper } from "@/hooks/useStaggerAnimation";
 
 interface PlayLog {
   id: string;
@@ -44,11 +45,9 @@ export function RecentActivity({ playLogs }: RecentActivityProps) {
           </div>
         ) : (
           <div className="space-y-1">
-            {activities.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center gap-3 rounded-lg px-4 py-3 transition-all hover:bg-muted/50"
-              >
+            {activities.map((item, idx) => (
+              <StaggerWrapper key={item.id} index={idx} itemsPerRow={1}>
+              <div className="flex items-center gap-3 rounded-lg px-4 py-3 transition-all hover:bg-muted/50">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                   <Play className="h-4 w-4 text-primary" />
                 </div>
@@ -65,6 +64,7 @@ export function RecentActivity({ playLogs }: RecentActivityProps) {
                   <StatusPill status="playing" size="sm" />
                 </div>
               </div>
+              </StaggerWrapper>
             ))}
           </div>
         )}
