@@ -2,11 +2,11 @@
 
 ## Current Focus
 
-Phase 5 complete. Phase 6 (Motion) is next.
+Phase 6 (Motion) complete. Phase 7 (Responsive) is next.
 
 ## Active Phase
 
-`phase-5-pages` — completed.
+`phase-6-motion` — completed.
 
 ## Phase Status
 
@@ -17,7 +17,7 @@ Phase 5 complete. Phase 6 (Motion) is next.
 | 3 — Primitives | ✅ PLAN.md (6 tasks, 3+ files) | ✅ | ✅ phase-3-SUMMARY.md |
 | 4 — Overview | ✅ PLAN.md (5 tasks, 7 files) | ✅ | ✅ 04-01-SUMMARY.md |
 | 5 — Pages Sweep | ✅ PLAN.md (18 tasks, 22 files) | ✅ | ✅ 05-pages-SUMMARY.md |
-| 6 — Motion | ✅ PLAN.md (5 tasks, 5 files) | ❌ | ❌ |
+| 6 — Motion | ✅ PLAN.md (10 tasks, 27 files) | ✅ | ✅ motion-SUMMARY.md |
 
 ## Decisions
 
@@ -38,10 +38,14 @@ Phase 5 complete. Phase 6 (Motion) is next.
 | Phase 5 Auth brand gradient | Blue tones (from-blue-950 via-blue-900 to-blue-800) instead of dark navy |
 | Phase 5 Form convention | Inputs use rounded-lg, buttons use rounded-full — visual distinction preserved |
 | Phase 5 Auth card wrapping | Form content wrapped in bg-card rounded-2xl shadow-card p-8 for visual separation |
+| Phase 6 Motion approach | CSS-driven stagger animation via animation-delay (no Framer Motion) — zero runtime overhead |
+| Phase 6 Stagger strategy | Row-major 40ms delay per card itemPerRow for grids, vertical for lists |
+| Phase 6 Hook file extension | .tsx required for hooks containing JSX (Turbopack parser requirement) |
+| Phase 6 Table empty states | Kept inline as EmptyState div cannot nest inside TableRow/TableCell |
 
 ## Blockers
 
-None — all plans ready. Phase 4 complete.
+None — all plans ready.
 
 ## Session
 
@@ -51,6 +55,7 @@ None — all plans ready. Phase 4 complete.
 | 2       | Phase 3   | 2026-06-29 | ~12 min |
 | 3       | Phase 4   | 2026-06-29 | ~22 min |
 | 4       | Phase 5   | 2026-06-30 | ~22 min |
+| 5       | Phase 6   | 2026-06-30 | ~25 min |
 
 ## Notes
 
@@ -58,4 +63,5 @@ None — all plans ready. Phase 4 complete.
 - Execute sequentially: Phase 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 - Phase 1 (tokens) must go first — all other phases depend on the design tokens
 - Each phase produces its own SUMMARY.md upon completion
-- Phase 6 (Motion) is next — add Framer Motion transitions and micro-interactions
+- Phase 6 (Motion) complete — CSS-driven stagger + count-up animations, empty/error/loading state components, error boundary wrapper
+- Phase 7 (Responsive) is next — mobile-responsive polish and breakpoint adjustments
