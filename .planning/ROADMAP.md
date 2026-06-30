@@ -42,9 +42,11 @@ Plans:
 
 ---
 
-### Phase 5: Per-Page Sweep
+### Phase 5: Per-Page Sweep ✅
 
 **Goal:** Apply tokens to Screens, Media, Playlists, Schedule, Analytics, Settings, Auth pages.
+
+**Completed:** 2026-06-30 — 22 files covered across all 8 page groups, borderless card pattern + capsule button convention established
 
 ---
 
@@ -62,5 +64,5 @@ Plans:
 | 2 — Shell | ✅ Planned (3 tasks, Wave 1) | 1 plan |
 | 3 — Primitives | ✅ Complete (9 files, all checks pass) | ✅ phase-3-SUMMARY.md |
 | 4 — Overview | ✅ Planned (4 tasks, Wave 1) | 1 plan |
-| 5 — Sweep | ✅ Planned (18 tasks, 7 sub-plans, Wave 1) | 1 plan |
+| 5 — Sweep | ✅ Complete (22 files, build passes) | ✅ 05-pages-SUMMARY.md |
 | 6 — Polish | ✅ Planned (5 tasks, Wave 1) | 1 plan |
