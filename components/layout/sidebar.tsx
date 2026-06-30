@@ -59,7 +59,7 @@ export function Sidebar() {
         className={cn(
           "flex items-center gap-3 rounded-[10px] px-3 py-3 text-sm w-full transition-colors duration-150",
           active
-            ? "bg-[#EEF3FF] text-[#4A7CF7] font-medium"
+            ? "bg-[#EEF3FF] text-[#4A7CF7] font-medium nav-active-enter"
             : "text-[#6B7394] hover:bg-[#F0F3FA]",
           collapsed && "justify-center px-2"
         )}
