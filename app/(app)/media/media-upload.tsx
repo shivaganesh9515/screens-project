@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Upload, Loader2, FileType, X, Check } from "lucide-react";
 
@@ -14,6 +15,8 @@ export function MediaUpload({ orgId }: { orgId: string }) {
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState<Record<string, number>>({});
+  const [folder, setFolder] = useState("");
+  const [tagsInput, setTagsInput] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const supabase = createClient();
@@ -48,11 +51,12 @@ export function MediaUpload({ orgId }: { orgId: string }) {
       if (uploadError) { toast.error(`Failed to upload ${file.name}`); setProgress((prev) => ({ ...prev, [file.name]: -1 })); continue; }
       let durationMs: number | null = null;
       if (type === "video") { const video = document.createElement("video"); video.src = URL.createObjectURL(file); await new Promise((resolve) => { video.onloadedmetadata = () => { durationMs = Math.round(video.duration * 1000); resolve(null); }; }); URL.revokeObjectURL(video.src); }
-      const { error: dbError } = await supabase.from("media_items").insert({ org_id: orgId, name: file.name, type, storage_path: filePath, thumbnail_path: thumbnailPath, duration_ms: durationMs, size_bytes: file.size });
+      const tags = tagsInput.split(",").map((t) => t.trim()).filter(Boolean);
+      const { error: dbError } = await supabase.from("media_items").insert({ org_id: orgId, name: file.name, type, storage_path: filePath, thumbnail_path: thumbnailPath, duration_ms: durationMs, size_bytes: file.size, folder: folder || null, tags: tags.length > 0 ? tags : null });
       if (dbError) toast.error(`Failed to save ${file.name}`);
       else setProgress((prev) => ({ ...prev, [file.name]: 100 }));
     }
-    setUploading(false); toast.success(`${files.length} file(s) uploaded`); setFiles([]); setOpen(false); router.refresh();
+    setUploading(false); toast.success(`${files.length} file(s) uploaded`); setFiles([]); setFolder(""); setTagsInput(""); setOpen(false); router.refresh();
   };
 
   return (
@@ -77,6 +81,19 @@ export function MediaUpload({ orgId }: { orgId: string }) {
                 {progress[file.name] === 100 ? <Check className="h-5 w-5 text-success shrink-0" /> : progress[file.name] === -1 ? <X className="h-5 w-5 text-destructive shrink-0" /> : !uploading && <Button variant="ghost" size="sm" onClick={() => removeFile(i)}><X className="h-4 w-4" /></Button>}
               </div>
             ))}
+          </div>
+        )}
+        {files.length > 0 && (
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="folder" className="text-sm font-medium">Folder</Label>
+              <Input id="folder" placeholder="e.g. marketing, lobby" value={folder} onChange={(e) => setFolder(e.target.value)} className="h-10 rounded-xl border-border" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="tags" className="text-sm font-medium">Tags</Label>
+              <Input id="tags" placeholder="e.g. marketing, lobby, promo" value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} className="h-10 rounded-xl border-border" />
+              <p className="text-xs text-muted-foreground">Comma-separated values</p>
+            </div>
           </div>
         )}
         {files.length > 0 && <Button onClick={handleUpload} disabled={uploading} className="w-full rounded-full gap-2">{uploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Uploading...</> : <><Upload className="h-4 w-4" /> Upload {files.length} file(s)</>}</Button>}
