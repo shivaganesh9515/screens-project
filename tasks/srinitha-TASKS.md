@@ -1,249 +1,77 @@
 # srinitha — Your Tasks (Simple Version)
 
-You build the **login system**, **media upload**, and **analytics**. Wait for harshitha to finish the database first.
+You own **login/signup/password reset**, **media upload**, and **analytics/reporting**. All three are largely built already — your job is mostly review + closing real gaps, not building from scratch.
+
+**Heads up on the product:** no `users` table, no orientation/portrait-landscape on media, no `live_url` media type, no ad-approval anything. `media_items.type` is only `'image'` or `'video'`. Read `supabase/migrations/00001_schema.sql` and `lib/types/database.ts` before touching any query so you use real column names.
 
 ---
 
-## TASK 1: Login System
+## TASK 1: Login System — STATUS: DONE (two small bugs)
 
-### What
-Pages where users log in, sign up, and reset password.
+### What exists (already built, review it, don't redo it)
+- `lib/supabase/client.ts` / `lib/supabase/server.ts` — both already exist, and both auto-fall-back to an in-memory **mock client** (`lib/supabase/mock-client.ts`) whenever `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY` are blank in `.env.local`. That's why the app currently "works" with no real backend — harshitha owns filling in real Supabase credentials (her Task 1); once that's done these files need no changes.
+- `app/(auth)/login/page.tsx` — calls `supabase.auth.signInWithPassword({ email, password })`, redirects to `/overview` on success. Done.
+- `app/(auth)/signup/page.tsx` — calls `supabase.auth.signUp(...)`, then correctly inserts a real `orgs` row and a real `org_members` row with `role: "admin"` tying the new `auth.users` id to that org. This is the right pattern for this schema (there is no `users` table to insert into). Done.
+- `app/(auth)/reset-password/page.tsx` — calls `supabase.auth.resetPasswordForEmail(...)`. Done.
+- `app/auth/callback/route.ts` — exchanges the auth code for a session and redirects. Done.
+- `middleware.ts` — already exists, handles both mock-mode bypass and real session-based route protection (redirects signed-out users to `/login`, redirects signed-in users away from auth pages, leaves `/api` and `/player` alone). Done, no changes needed.
 
-### Files to create
+### What's missing / needs a fix pass
 
-#### `lib/supabase/client.ts`
-Supabase connection for the browser.
+**Fix 1 — signup isn't atomic.** `app/(auth)/signup/page.tsx` does three separate calls in sequence: `auth.signUp` → insert into `orgs` → insert into `org_members`. If step 2 or 3 fails partway (network blip, slug collision on `orgs.slug`), you end up with an auth user that has no org, and they'll be stuck. At minimum, catch errors from each step and show a clear message; ideally, move org+member creation into a single Postgres function (`SECURITY DEFINER` RPC) called once after signup so it's one atomic transaction. If you don't have time for the RPC, at least add a friendly error for slug collisions (currently a raw Postgres error would leak to the user).
 
-```ts
-import { createBrowserClient } from "@supabase/ssr";
-
-export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
-```
-
-#### `lib/supabase/server.ts`
-Supabase connection for the server.
-
-```ts
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import { cookies } from "next/headers";
-
-export async function createClient() {
-  const cookieStore = await cookies();
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) { return cookieStore.get(name)?.value; },
-        set(name: string, value: string, options: CookieOptions) { cookieStore.set({ name, value, ...options }); },
-        remove(name: string, options: CookieOptions) { cookieStore.set({ name, value: "", ...options }); },
-      },
-    }
-  );
-}
-```
-
-#### `app/(auth)/login/page.tsx`
-Login page.
-
-**What it shows:**
-- "Screens" title
-- Email input
-- Password input
-- "Sign In" button
-- "Forgot password?" link
-- "Don't have an account? Sign up" link
-- Error message if wrong password
-
-**How it works:**
-1. User types email + password
-2. Clicks "Sign In"
-3. Calls `supabase.auth.signInWithPassword({ email, password })`
-4. If success → go to `/overview`
-5. If error → show error message
-
-**Style:**
-- Centered card on gray background
-- White card with rounded corners
-- Blue button
-
-#### `app/(auth)/signup/page.tsx`
-Signup page.
-
-**What it shows:**
-- Full name input
-- Email input
-- Password input
-- Confirm password input
-- "Sign Up" button
-- "Already have an account? Sign in" link
-
-**How it works:**
-1. Validate: passwords match, email valid, password 6+ chars
-2. Call `supabase.auth.signUp({ email, password })`
-3. If success → insert into `users` table with role `'advertiser'`
-4. Go to `/overview`
-
-#### `app/(auth)/reset-password/page.tsx`
-Password reset page.
-
-**What it shows:**
-- Email input
-- "Send Reset Link" button
-- "Check your email" message after submit
-
-**How it works:**
-1. Call `supabase.auth.resetPasswordForEmail(email)`
-2. Show success message
-
-#### `middleware.ts`
-Already exists. Read it, understand it, make sure it works.
+**Fix 2 — reset-password redirect param mismatch.** `reset-password/page.tsx` calls `resetPasswordForEmail(email, { redirectTo: ...&redirect_to=/overview })` but `app/auth/callback/route.ts` reads `searchParams.get("next")`, not `redirect_to`. It happens to still work today because `next` defaults to `/overview` anyway, but if you ever want the reset flow to land somewhere other than `/overview`, this silently won't work. Rename the query param on the sending side to `next` so it actually matches what the callback reads.
 
 ---
 
-## TASK 2: Media Upload
+## TASK 2: Media Upload — STATUS: PARTIAL
 
-### What
-Page where users upload images, videos, and add live video links. Can filter by portrait/landscape.
+### What exists (already built, review it, don't redo it)
+- `app/(app)/media/page.tsx` — server component, fetches real `media_items` for your org, derives the folder list from the real `folder` column.
+- `app/(app)/media/media-grid.tsx` — grid view using only real columns (`storage_path`, `thumbnail_path`, `duration_ms`, `size_bytes`, `folder`, `tags`, `type: "image"|"video"`). Type filter and a folder filter dropdown both work. Delete removes the `media_items` row.
+- `app/(app)/media/media-upload.tsx` — uploads the file to Storage bucket `media`, generates a video thumbnail client-side via `<video>`/`<canvas>` for videos, inserts a `media_items` row with `org_id`, `name`, `type`, `storage_path`, `thumbnail_path`, `duration_ms`, `size_bytes`. No phantom columns (no `orientation`, `live_url`, `created_by` — correctly matches schema).
 
-### Files to create
+### What's missing / needs a fix pass
 
-#### `app/(app)/media/page.tsx`
-Main media page.
+**Fix 1 — no way to set folder or tags on upload.** `media-grid.tsx` can filter by folder, and the `tags[]` column exists on `media_items`, but `media-upload.tsx` never lets the user pick a folder or add tags — every upload gets `folder: null, tags: null`. Add a folder text input (or a select-existing/type-new combo) and a simple tag input (comma-separated → `string[]`) to the upload form, and include `folder`/`tags` in the `insert(...)` call.
 
-**What it shows:**
-- Top bar: "Media Library" + "Upload" button + "Add Live URL" button
-- Filter buttons: All | Portrait | Landscape
-- View toggle: Grid | List
-- Media items in grid or list
+**Fix 2 — no tag filtering in the grid.** `media-grid.tsx`'s `MediaItem` type already includes `tags`, but nothing renders or filters on it. Once Fix 1 lets tags get set, add a tag filter alongside the existing type/folder filters (e.g. a multi-select of all distinct tags currently in use, filtering client-side).
 
-**How it works:**
-1. Fetch media: `supabase.from("media_items").select("*")`
-2. Filter by orientation when user clicks filter buttons
-3. Switch between grid and list view
+**Fix 3 — delete doesn't clean up Storage.** `media-grid.tsx`'s delete only removes the `media_items` row; the actual file at `storage_path` (and its `thumbnail_path`) stays in the `media` bucket forever. Add `supabase.storage.from("media").remove([storage_path, thumbnail_path].filter(Boolean))` before or after the row delete.
 
-#### `components/media/upload-dropzone.tsx`
-Upload component.
-
-**What it does:**
-1. User drags file or clicks to select
-2. Shows modal: "Is this Portrait or Landscape?"
-3. User picks orientation
-4. Uploads file to Supabase Storage bucket `media`
-5. Inserts record into `media_items` table
-
-**Upload code:**
-```ts
-const filePath = `${Date.now()}-${file.name}`;
-await supabase.storage.from("media").upload(filePath, file);
-await supabase.from("media_items").insert({
-  org_id: orgId,
-  name: file.name,
-  type: file.type.startsWith("video/") ? "video" : "image",
-  orientation: selectedOrientation,
-  storage_path: filePath,
-  size_bytes: file.size,
-});
-```
-
-#### `components/media/media-grid.tsx`
-Grid view of media.
-
-**Each card shows:**
-- Thumbnail image
-- Name
-- Badge: "Image" / "Video" / "Live"
-- Badge: "Portrait" / "Landscape"
-- File size
-- Delete button
-
-#### `components/media/media-list.tsx`
-Table view of media.
-
-**Columns:** Name, Type, Orientation, Size, Duration, Created, Actions
-
-#### `components/media/add-live-url-modal.tsx`
-Modal to add a live video link.
-
-**Fields:**
-- Name (text)
-- URL (text, like "https://example.com/stream.m3u8")
-- Orientation: Portrait / Landscape
-
-**On submit:** Insert into `media_items` with `type: 'live_url'`
+**Fix 4 — decide what to do with the orphaned upload API route.** `app/api/media/upload/route.ts` is a fully-working presigned-upload-URL endpoint (`POST` with `{ org_id, file_name }` → `{ signedUrl, path, token }`), but `media-upload.tsx` doesn't use it — it uploads directly from the browser via `supabase.storage.from("media").upload(...)` using the anon key. Either:
+  - (recommended) switch `media-upload.tsx` to request a signed URL from `/api/media/upload` first, then upload to that URL — this is the safer pattern since it doesn't require the client to hold broad storage-write permission, or
+  - remove the unused route if you decide direct client upload is fine for this app's threat model.
+Pick one and note your reasoning in the PR.
 
 ---
 
-## TASK 3: Analytics
+## TASK 3: Analytics — STATUS: DONE (polish items, not a rebuild)
 
-### What
-Dashboard showing how much ads played and screen uptime. Advertisers see ONLY their own data.
+### What exists (already built, review it, don't redo it)
+- `app/(app)/analytics/page.tsx` — server component. Real queries: `screens` (id, name, is_online), `play_logs` joined to `screens!inner(name)` and `media_items(name, type)` filtered to your org's screen ids, ordered by `started_at` desc, capped at 2000 rows, and `media_items` (id, name, type).
+- `app/(app)/analytics/analytics-dashboard.tsx` — client component, does all aggregation from the `playLogs` prop: total impressions, total play time, active screens, uptime %, daily trend chart, media breakdown, type distribution pie, per-screen performance, and a working **CSV export** button (`Media, Media Type, Screen, Started, Duration (s)`).
 
-### Files to create
+This is real, functioning `play_logs` reporting — not mock data, not a stub.
 
-#### `app/(app)/analytics/page.tsx`
-Analytics page.
+### What's missing / needs a fix pass
 
-**What it shows:**
-- Stats cards: Total Screen Hours, Total Ad Plays, Active Screens, Pending Ads
-- Date range: 7 days | 30 days | 90 days
-- Screen Uptime Table: which screens were on/off
-- Ad Play Count Table: which ads played how many times
-- "Export CSV" button
+**Fix 1 — grouping by name instead of id.** Both the media breakdown and per-screen performance aggregations group rows by `media_items.name` / `screens.name` instead of `media_item_id` / `screen_id`. If two items in the same org ever share a name, their stats will incorrectly merge. Switch the grouping keys to the ids (still display the name, just don't group by it).
 
-**Important:** If logged in as advertiser, only show their ads.
+**Fix 2 — "uptime %" is a live snapshot, not a real historical metric.** `uptimePercent` is computed as `onlineScreens / screens.length` using the *current* `screens.is_online` flag — it does not reflect how online each screen was across the selected date range, since the schema has no historical online/offline log (only a single live boolean). This is a real, known limitation, not a bug to "fix" by yourself — flag it to harshitha, since a real historical uptime metric would need either (a) the offline-detection sweep she's building in her Task 2 to also write a small time-series log, or (b) deriving approximate uptime from `play_logs` density (screens with logged plays are inferred "up"). Coordinate with her before building anything here; for now just make sure the dashboard clearly labels this stat "Currently Online %" rather than implying it's a historical percentage.
 
-#### `components/analytics/stats-card.tsx`
-One stat card.
-
-**Shows:** Icon, big number, label
-
-#### `components/analytics/uptime-table.tsx`
-Table showing screen uptime.
-
-**Columns:** Screen Name, Device Type, Online Hours, Offline Hours, Uptime %
-
-#### `components/analytics/ad-plays-table.tsx`
-Table showing ad play counts.
-
-**Columns:** Ad Name, Created By, Play Count, Total Duration, Last Played
-
-#### `lib/utils.ts`
-Add CSV export function:
-
-```ts
-export function exportToCSV(data: Record<string, unknown>[], filename: string) {
-  const headers = Object.keys(data[0]);
-  const csv = [
-    headers.join(","),
-    ...data.map(row => headers.map(h => `"${row[h]}"`).join(","))
-  ].join("\n");
-  const blob = new Blob([csv], { type: "text/csv" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-}
-```
+**Fix 3 — hard 2000-row cap.** `page.tsx`'s `play_logs` query has `.limit(2000)` with no pagination, so for an org with heavy play volume, all charts/KPIs silently only reflect the most recent 2000 log rows regardless of the selected date range. If this matters for your org's scale, either raise the limit, or better, push the date-range filter into the Supabase query itself (`.gte("started_at", rangeStart)`) instead of fetching a flat 2000 and filtering client-side.
 
 ---
 
 ## Test Checklist
 
-- [ ] Can sign up with email + password
-- [ ] Can log in and see dashboard
-- [ ] Can reset password
-- [ ] Can upload image, choose orientation, see it in grid
-- [ ] Can add live URL, see it in grid
-- [ ] Can filter by portrait/landscape
-- [ ] Analytics page shows stats
-- [ ] Export CSV downloads a file
+- [ ] Can sign up (creates a real `orgs` + `org_members` row), log in, reset password.
+- [ ] Signup shows a friendly error on slug collision instead of a raw DB error.
+- [ ] Can upload an image/video, set a folder and tags, see them in the grid.
+- [ ] Can filter media by folder and by tag.
+- [ ] Deleting a media item also removes its file from Storage.
+- [ ] Analytics dashboard shows real numbers from `play_logs`, media/screen breakdowns don't merge same-named items, CSV export downloads a file.
 
 ---
 

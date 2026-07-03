@@ -1,305 +1,96 @@
 # abhinya — Your Tasks (Simple Version)
 
-You build the **home page with the map**, **playlists**, and **settings**. Wait for harshitha to finish the database first.
+You own the **dashboard home page**, **playlists**, **templates** (the zone editor — your biggest real task), and **settings**.
+
+**Heads up on the product:** there's no Google Map, no GPS, no lat/lng anywhere in the schema — the old "map with colored dots" task doesn't apply. The real home page is an analytics-style dashboard. Templates are zone layouts (`zones` JSONB, each zone `{id,x,y,w,h,playlist_id}`) — each zone gets bound to a playlist, and that's the part that's genuinely unbuilt. Read `supabase/migrations/00001_schema.sql` and `lib/types/database.ts` before writing any query so you use real column names.
 
 ---
 
-## TASK 1: Home Page with Google Map
+## TASK 1: Dashboard Home Page — STATUS: DONE (minor polish only)
 
-### What
-The main page after login. Shows a map with all screens as colored dots. Left side is map, right side is screen list.
+### What exists (already built, review it, don't redo it — this is NOT a map, don't build one)
+`app/(app)/overview/page.tsx` is a real server component pulling real data: `screens`, `media_items`, `schedules` (joined to `playlists(name)`, `screens(name)`, `screen_groups(name)`), `playlists`, `screen_groups`, and `play_logs` (joined to `screens(name)`, `media_items(name, type)`, capped at 1000 rows). No mock imports anywhere in this directory. Child components, all real:
+- `analytics-cards.tsx` — Total/Online/Offline screens + Active Content KPI cards.
+- `playback-activity-chart.tsx` — real `play_logs` bucketed by hour/day/month with a 1D/1W/1M/1Y/ALL toggle.
+- `recent-activity.tsx`, `media-distribution-chart.tsx`, `screen-health-chart.tsx`, `top-content.tsx`, `recent-media.tsx`, `upcoming-schedules.tsx`, `screen-status-list.tsx` — all render real data passed down as props.
+- `smart-insights.tsx`, `operational-metrics.tsx` — mostly real (`fleetUptime` is a real computed ratio).
+- `quick-deploy-widget.tsx` — real `playlists`/`screens`/`screen_groups` populate its dropdowns.
 
-### Files to create
+### What's missing / needs a fix pass
 
-#### `app/(app)/overview/page.tsx`
-Main dashboard page. This is what users see after login.
+**Fix 1 — "Quick Deploy" doesn't actually deploy anything.** `quick-deploy-widget.tsx`'s `handlePush` currently just shows `toast.success("Content pushed to screen(s)")` — it never writes anything to the database. Wire it to actually `supabase.from("schedules").insert({ org_id, playlist_id: <selected>, screen_id or group_id: <selected>, is_default: true, priority: 0 })` (or whatever priority/target makes sense for a "push now" action), matching the same insert shape `schedule-calendar.tsx` already uses (harshitha's Task 3 — check with her once she's fixed the group_id bug there, so you don't duplicate that mistake).
 
-**Layout:**
-```
-+------------------------------------------+
-|  Total Screens: 12  Online: 8  Off: 4   |  ← stats row
-+------------------------------------------+
-|                    |                      |
-|    GOOGLE MAP      |    SCREEN LIST       |
-|    (left 60%)      |    (right 40%)       |
-|                    |                      |
-|   🟢  🟢           |  🟢 Bus 42 - Online  |
-|      🔴           |  🔴 Auto 15 - Offline |
-|   🟢             |  🟢 Bus 08 - Online  |
-|                    |                      |
-+------------------------------------------+
-```
-
-**Step by step:**
-1. Read existing `app/(app)/overview/page.tsx` to understand the layout
-2. Fetch all screens: `supabase.from("screens").select("*")`
-3. Left side: render Google Map with screen dots
-4. Right side: render stats cards + screen list
-
-#### `components/dashboard/screen-map.tsx`
-Google Map component.
-
-**First:** Install Google Maps: `npm install @react-google-maps/api`
-
-**What it does:**
-1. Shows a map of India (or your city)
-2. For each screen with GPS coordinates, puts a colored dot:
-   - Green dot = screen is online
-   - Red dot = screen is offline
-3. Click on dot → shows popup with screen info
-
-**Code:**
-```tsx
-"use client";
-import { GoogleMap, LoadScript, Marker, InfoWindow } from "@react-google-maps/api";
-import { useState } from "react";
-
-export function ScreenMap({ screens }) {
-  const [selected, setSelected] = useState(null);
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-
-  if (!apiKey) {
-    return <div className="w-full h-full bg-gray-100 flex items-center justify-center">Map loading...</div>;
-  }
-
-  return (
-    <LoadScript googleMapsApiKey={apiKey}>
-      <GoogleMap 
-        mapContainerStyle={{ width: "100%", height: "100%" }} 
-        center={{ lat: 20.5937, lng: 78.9629 }} 
-        zoom={5}
-      >
-        {screens.map((screen) => (
-          screen.lat && screen.lng && (
-            <Marker
-              key={screen.id}
-              position={{ lat: screen.lat, lng: screen.lng }}
-              icon={{
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 8,
-                fillColor: screen.is_online ? "#22C55E" : "#EF4444",
-                fillOpacity: 1,
-                strokeColor: "#fff",
-                strokeWeight: 2,
-              }}
-              onClick={() => setSelected(screen)}
-            />
-          )
-        ))}
-        {selected && (
-          <InfoWindow position={{ lat: selected.lat, lng: selected.lng }} onCloseClick={() => setSelected(null)}>
-            <div>
-              <h3 className="font-bold">{selected.name}</h3>
-              <p>{selected.unique_id}</p>
-              <p>{selected.vehicle_number || "No vehicle number"}</p>
-            </div>
-          </InfoWindow>
-        )}
-      </GoogleMap>
-    </LoadScript>
-  );
-}
-```
-
-**If no API key yet:** Show a gray placeholder box with "Map — API key needed" text.
-
-#### `components/dashboard/stats-row.tsx`
-Four stat cards at the top.
-
-**Cards:**
-1. Total Screens (blue icon)
-2. Online (green icon)
-3. Offline (red icon)
-4. Active Ads (purple icon)
-
-**Code:**
-```tsx
-import { Monitor, Wifi, WifiOff, Megaphone } from "lucide-react";
-
-export function StatsRow({ total, online, offline, activeAds }) {
-  return (
-    <div className="grid grid-cols-4 gap-4 mb-6">
-      <div className="bg-white rounded-2xl p-4 shadow-sm">
-        <Monitor className="w-5 h-5 text-blue-600" />
-        <p className="text-2xl font-bold mt-2">{total}</p>
-        <p className="text-sm text-gray-500">Total Screens</p>
-      </div>
-      <div className="bg-white rounded-2xl p-4 shadow-sm">
-        <Wifi className="w-5 h-5 text-green-600" />
-        <p className="text-2xl font-bold mt-2">{online}</p>
-        <p className="text-sm text-gray-500">Online</p>
-      </div>
-      <div className="bg-white rounded-2xl p-4 shadow-sm">
-        <WifiOff className="w-5 h-5 text-red-600" />
-        <p className="text-2xl font-bold mt-2">{offline}</p>
-        <p className="text-sm text-gray-500">Offline</p>
-      </div>
-      <div className="bg-white rounded-2xl p-4 shadow-sm">
-        <Megaphone className="w-5 h-5 text-purple-600" />
-        <p className="text-2xl font-bold mt-2">{activeAds}</p>
-        <p className="text-sm text-gray-500">Active Ads</p>
-      </div>
-    </div>
-  );
-}
-```
-
-#### `components/dashboard/screen-list.tsx`
-List of screens on the right side.
-
-**Each screen shows:**
-- Green/red dot
-- Screen name
-- Device type (Bus/Auto)
-- Unique ID
-- Last seen ("5 min ago")
-
-**Click on a screen → goes to `/screens/[id]`**
-
-#### Update sidebar navigation
-Read `app/(app)/layout.tsx`. Make sure the sidebar has these links:
-- Home (overview)
-- Screens
-- Media
-- Playlists
-- Ads
-- Analytics
-- Users (admin only)
-- Settings
+**Fix 2 (optional, low priority) — two hardcoded metrics.** In `app/(app)/overview/page.tsx`, `storageUsed = 64` and `contentFreshness = 87` are literal constants, not computed from real data, shown via `operational-metrics.tsx`. `storageUsed` could be computed from `media_items.size_bytes` sums (and would need a Storage-bucket-level quota to be meaningful); `contentFreshness` doesn't have an obvious schema-backed definition. Fine to leave as placeholders for now — just don't present them as real in a demo. Only fix if you have spare time.
 
 ---
 
-## TASK 2: Playlists with Play Count
+## TASK 2: Playlists — STATUS: DONE
 
-### What
-Group videos into playlists. Set how many times each video plays before moving to the next.
+### What exists (already built, review it, don't redo it)
+- `app/(app)/playlists/page.tsx` — server component, real `playlists` query with `playlist_items(count)`.
+- `app/(app)/playlists/playlists-list.tsx` — grid of playlist cards, create/delete against real `playlists` table. No `play_count` field anywhere (correct — that column doesn't exist in this schema; looping/repetition is controlled purely by how many times you add the same media item to a playlist and by each item's `duration_ms`).
+- `app/(app)/playlists/[id]/page.tsx` — server component, loads one playlist with `playlist_items(*, media_items(*))` plus the org's media library.
+- `app/(app)/playlists/[id]/playlist-builder.tsx` — real drag-and-drop via `@dnd-kit/core`/`@dnd-kit/sortable` (`DndContext`, `SortableContext`, `useSortable`, `arrayMove`). Save correctly persists `position` (array index) and `duration_ms` (editable per item, defaults to the media's own `duration_ms` or 10000ms for images) to `playlist_items`.
 
-### Files to create
-
-#### `app/(app)/playlists/page.tsx`
-Playlist list page.
-
-**What it shows:**
-- "Playlists" title + "Create Playlist" button
-- Cards for each playlist: name, item count, total duration
-- Click card → goes to playlist builder
-
-#### `app/(app)/playlists/[id]/page.tsx`
-Playlist builder page. This is the main work.
-
-**Layout:**
-```
-+------------------------------------------+
-|  Playlist: Summer Ads                    |
-|  +------------------------------------+  |
-|  | ☰ Bus Ad 1      | 10s | play 3x |  |  |
-|  | ☰ Auto Ad 2     | 15s | play 1x |  |  |
-|  | ☰ Festival Ad   | 20s | play 2x |  |  |
-|  +------------------------------------+  |
-|  [Add Media]              [Save]         |
-+------------------------------------------+
-```
-
-**Each row shows:**
-- Drag handle (6 dots) — to reorder
-- Thumbnail
-- Name
-- Duration input (seconds)
-- **Play Count input** — how many times to play
-- Remove button (X)
-
-**Buttons:**
-- "Add Media" — opens media picker
-- "Save" — saves to database
-
-#### `components/playlists/playlist-builder.tsx`
-The main playlist component with drag-and-drop.
-
-**Uses:** `@dnd-kit/core` and `@dnd-kit/sortable` (already installed)
-
-**How drag-and-drop works:**
-1. Wrap items in `DndContext` and `SortableContext`
-2. Each item uses `useSortable` hook
-3. On drag end → reorder items, update position numbers
-
-#### `components/playlists/media-picker.tsx`
-Modal to pick videos to add.
-
-**What it shows:**
-- Grid of all media items
-- Click to select (highlight with blue border)
-- "Add Selected" button
-
-#### `components/playlists/playlist-item.tsx`
-One item in the playlist.
-
-**Shows:** Drag handle, thumbnail, name, duration input, play count input, remove button
+Nothing to build here. If you have spare time: the save flow deletes all `playlist_items` for the playlist and re-inserts them fresh rather than updating in place, which means item ids change on every save — harmless functionally, but if you ever add per-item history/analytics keyed on `playlist_items.id` this would break it. Not worth changing unless you hit that need.
 
 ---
 
-## TASK 3: Settings + Screen Saver
+## TASK 3: Templates (Zone Editor) — STATUS: PARTIAL — this is your main build
 
-### What
-Settings page with organization info, screen saver config, and user profile.
+### What exists (already built, review it, don't redo it)
+- `app/(app)/templates/page.tsx` — server component, real `templates` query for your org.
+- `app/(app)/templates/templates-list.tsx` — a list/preset picker with 5 hardcoded layouts (Full Screen, L-Bar, Split Horizontal, Split Vertical, Picture-in-Picture), each with a fixed `zones` array. "Use Template" inserts a new `templates` row (`is_preset: true`, the preset's zones). A "New Template" dialog lets you name a template and pick one of the 5 presets. Cards show a small read-only aspect-video preview of the zones (positioned `div`s from `zone.x/y/w/h` percentages). Delete works.
 
-### Files to create
+### What's actually missing (the real work)
 
-#### `app/(app)/settings/page.tsx`
-Settings page with tabs.
+**This is the core gap: there is no way to bind a zone to a playlist, and no way to draw a custom layout.** Every zone created today only ever has `{id,x,y,w,h}` — `zones[].playlist_id` (a real field per `lib/types/database.ts`'s `Zone` type) is never set anywhere in the app. Templates today are purely decorative previews with no actual content behind them, and there's no `app/(app)/templates/[id]/page.tsx` at all.
 
-**Tabs:**
-1. Organization — org name, logo, timezone
-2. Screen Saver — what shows when no ad is playing
-3. Profile — display name, change password
+Build:
+1. **`app/(app)/templates/[id]/page.tsx`** — a template editor page, following the same server-component pattern as `app/(app)/playlists/[id]/page.tsx`: load one `templates` row by id + org_id, plus the org's `playlists` list (for the zone-to-playlist picker).
+2. **A zone editor component** (e.g. `app/(app)/templates/[id]/zone-editor.tsx` or `components/templates/zone-editor.tsx`, your call which — match whichever convention feels closer to `playlist-builder.tsx`'s placement) that:
+   - Renders the template's `zones` as positioned boxes on a canvas (reuse the percentage-position math already in `templates-list.tsx`'s preview).
+   - Lets the user click a zone and assign it a playlist from a `<Select>` of the org's real playlists (matching by `playlist_id`, same pattern `screen-detail.tsx` uses for its group `<Select>`).
+   - Optionally: lets the user drag/resize zone edges to adjust `x/y/w/h`, and add/remove zones for a from-scratch custom layout (today "New Template" can only reuse one of the 5 presets — a real from-scratch builder is a stretch goal if you have time after playlist-binding works).
+   - On save, `supabase.from("templates").update({ zones: updatedZonesArray }).eq("id", template.id)`.
+3. **Fix the double-JSON-encoding bug while you're in this file.** `templates-list.tsx`'s "Use Template" handler does `zones: JSON.stringify(preset.zones)` before inserting — since `zones` is already a JSONB column, supabase-js will serialize the array for you; explicitly stringifying it first risks storing a JSON *string* instead of a JSON *array/object* (double-encoded). Remove the manual `JSON.stringify(...)` and pass `preset.zones` directly.
+4. Make each template card in `templates-list.tsx` link to `/templates/[id]` so users can actually reach the new editor.
 
-#### `components/settings/org-settings.tsx`
-Organization settings form.
+---
 
-**Fields:**
-- Organization Name (text input)
-- Logo (file upload)
-- Timezone (dropdown: UTC, IST, etc.)
-- Save button
+## TASK 4: Settings — STATUS: PARTIAL
 
-#### `components/settings/screen-saver-config.tsx`
-Screen saver settings.
+### What exists (already built, review it, don't redo it)
+- `app/(app)/settings/page.tsx` — server component, real `org_members` + `orgs` join for the current user, plus a full `org_members` list for the team section.
+- `app/(app)/settings/settings-form.tsx` — 4 tabs:
+  - **Organization** — edits real `orgs.name`/`orgs.timezone` via `supabase.from("orgs").update(...)`. `slug` shown read-only.
+  - **Team Members** — lists real `org_members`, delete works against the real table.
+  - **Profile** — shows real `user.email`/role, read-only.
+  - **Billing** — shows real `org.plan`, read-only.
 
-**What it shows:**
-- Toggle: Active / Inactive
-- Media picker: select an image for screen saver
-- Timeout: how many seconds of idle before screensaver shows (default 300)
-- Save button
+### What's missing / needs a fix pass
 
-**How it works:**
-1. Fetch current settings from `screen_saver` table
-2. Show form with current values
-3. On save → update `screen_saver` table
+**Fix 1 — no logo upload.** `orgs.logo_path` is a real column but there's no UI to set it anywhere. Add a file input to the Organization tab that uploads to the `media` Storage bucket (same bucket srinitha's upload flow uses — e.g. path `${orgId}/logo.{ext}`) and saves the resulting path to `orgs.logo_path` via the same `update()` call the name/timezone fields already use.
 
-#### `components/settings/profile-settings.tsx`
-User profile form.
+**Fix 2 — "Invite" is a stub.** `handleInvite` in the Team Members tab currently just shows a success toast with no actual invite happening — no row is inserted anywhere, no email sent. A real invite needs to look up whether the invited email already has an `auth.users` account (the client can't query `auth.users` directly with the anon key), so build a small API route, e.g. `app/api/org/invite/route.ts`, using the Supabase **service role key** server-side (`SUPABASE_SERVICE_ROLE_KEY`, already in `.env.example`) to look up the user by email via the Supabase Admin API and, if found, insert an `org_members` row for them with `role: "editor"` (or whatever role the inviter picks). If the email has no account yet, return a clear "ask them to sign up first, then invite again" message — building a full email-invite flow is out of scope unless you have extra time.
 
-**Fields:**
-- Display Name (text input)
-- Email (read-only, grayed out)
-- Change Password: new password + confirm
-- Save button
+**Fix 3 — no password change.** The Profile tab is read-only. Add a "change password" form calling `supabase.auth.updateUser({ password: newPassword })`.
+
+**Fix 4 — leave Billing alone.** The "Upgrade Plan" button has no handler and says "Payment processing coming soon" — that's an intentional placeholder, not a bug. No real payment provider is in scope here; don't build anything for it unless asked.
+
+**Not a gap — confirmed correctly absent:** there is no `screen_saver` table in the schema, and no screen-saver UI exists in Settings. That's correct: idle/default content is already handled by a schedule with `is_default = true` (see harshitha's Task 3) rather than a separate screensaver feature — don't add a screen-saver table or UI.
 
 ---
 
 ## Test Checklist
 
-- [ ] Home page shows map (or placeholder) + screen list
-- [ ] Stats cards show correct numbers
-- [ ] Clicking a screen dot on map shows info popup
-- [ ] Can create a playlist
-- [ ] Can add media to playlist
-- [ ] Can set play count per item
-- [ ] Can drag to reorder
-- [ ] Can save playlist
-- [ ] Settings page shows with tabs
-- [ ] Can change org name
-- [ ] Can set screen saver image
-- [ ] Can update profile
+- [ ] Dashboard shows real KPIs/charts, Quick Deploy actually creates a schedule row.
+- [ ] Can create a playlist, drag-reorder items, edit durations, save.
+- [ ] Can open a template, assign a playlist to each zone, save, and see it reflected (check `templates.zones[].playlist_id` in Supabase).
+- [ ] New templates insert `zones` as a real array/object, not a JSON string.
+- [ ] Can update org name/timezone/logo.
+- [ ] Can invite a teammate who already has an account (real `org_members` row appears); get a clear message when they don't.
+- [ ] Can change your own password from Settings → Profile.
 
 ---
 
