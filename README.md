@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Screens Website
 
-## Getting Started
+Ad management system for screens installed in buses and autos. See `tasks/README.md` for the product overview and `tasks/COORDINATION.md` for who's building what.
 
-First, run the development server:
+## How to Run
+
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Set up environment variables
+
+Copy the example file:
+
+```bash
+cp .env.example .env.local
+```
+
+You can leave the Supabase keys **blank** — the app automatically falls back to an in-memory mock Supabase client (see `lib/supabase/mock-client.ts`) so you can run and develop the full UI without a real database. This is the fastest way to get started.
+
+To connect a real Supabase project instead, fill in `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` in `.env.local` (get these from your project's Settings → API page), then run the schema migration in `supabase/migrations/00001_schema.sql` against it.
+
+### 3. Start the dev server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). Pages auto-reload as you edit.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Other scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build   # production build
+npm run start   # run the production build
+npm run lint    # eslint
+```
 
-## Learn More
+## Project Structure
 
-To learn more about Next.js, take a look at the following resources:
+- `app/(app)/` — main authenticated app pages (overview, screens, schedule, etc.)
+- `app/auth/` — auth routes
+- `app/player/` — the player app that runs on the physical screens
+- `app/api/` — API routes (screen pairing, heartbeat, media upload, play logs)
+- `components/` — shared UI (`components/ui/` is shadcn-based)
+- `lib/supabase/` — Supabase client, server client, and the mock client used for local dev
+- `supabase/migrations/` — SQL schema
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Note on Next.js version
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This repo uses a newer/pre-release Next.js. Read `AGENTS.md` before making changes — it flags that some conventions here differ from what you may expect from prior Next.js versions (e.g. `middleware.ts` is being deprecated in favor of `proxy.ts`; the running dev server already warns about this).
