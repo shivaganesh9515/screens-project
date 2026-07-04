@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ArrowLeft, Save, Layout, Play, Plus, Trash2, GripVertical } from "lucide-react";
+import { ArrowLeft, Save, Layout, Play, Plus, Trash2 } from "lucide-react";
 
 interface Zone {
   id: string;
@@ -121,12 +121,6 @@ export function ZoneEditor({ template: initialTemplate, playlists, orgId }: Zone
     "border-cyan-400 bg-cyan-50/40",
   ];
 
-  const getPlaylistName = (playlistId: string | null): string => {
-    if (!playlistId) return "No playlist assigned";
-    const p = playlists.find((pl) => pl.id === playlistId);
-    return p?.name ?? "Unknown playlist";
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -208,7 +202,7 @@ export function ZoneEditor({ template: initialTemplate, playlists, orgId }: Zone
                 >
                   <div className="flex items-center gap-3">
                     <div
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${zoneColors[i % zoneColors].replace("border-", "bg-").replace("/40", "/20")}`}
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${zoneColors[i % zoneColors.length].replace("border-", "bg-").replace("/40", "/20")}`}
                     >
                       <Layout className="h-4 w-4 text-muted-foreground" />
                     </div>
