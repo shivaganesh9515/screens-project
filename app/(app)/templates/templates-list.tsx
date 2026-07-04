@@ -3,13 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { StaggerWrapper } from "@/hooks/useStaggerAnimation";
-import { Layout, Plus, Trash2, Layers, Check } from "lucide-react";
+import { Layout, Plus, Trash2, Layers, Check, ExternalLink } from "lucide-react";
 
 const presets = [
   { name: "Full Screen", zones: [{ id: "z1", x: 0, y: 0, w: 100, h: 100 }], description: "Single zone, 100% canvas" },
@@ -31,7 +32,7 @@ export function TemplatesList({ templates, orgId }: { templates: Template[]; org
 
   const handleCreatePreset = async (presetIndex: number) => {
     const preset = presets[presetIndex]; setCreating(true);
-    const { error } = await supabase.from("templates").insert({ name: preset.name, org_id: orgId, is_preset: true, zones: JSON.stringify(preset.zones) });
+    const { error } = await supabase.from("templates").insert({ name: preset.name, org_id: orgId, is_preset: true, zones: preset.zones });
     if (!error) { toast.success("Template created"); router.refresh(); } setCreating(false);
   };
 
@@ -39,7 +40,7 @@ export function TemplatesList({ templates, orgId }: { templates: Template[]; org
     e.preventDefault();
     if (selectedPreset === null) return; setCreating(true);
     const preset = presets[selectedPreset];
-    const { error } = await supabase.from("templates").insert({ name, org_id: orgId, is_preset: false, zones: JSON.stringify(preset.zones) });
+    const { error } = await supabase.from("templates").insert({ name, org_id: orgId, is_preset: false, zones: preset.zones });
     if (error) toast.error("Failed");
     else { toast.success("Template created"); setOpen(false); setName(""); router.refresh(); } setCreating(false);
   };
@@ -100,18 +101,23 @@ export function TemplatesList({ templates, orgId }: { templates: Template[]; org
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {templates.map((template, idx) => (
               <StaggerWrapper key={template.id} index={idx} itemsPerRow={3}>
-              <div className="group relative rounded-2xl bg-card p-5 shadow-card transition-all hover:shadow-card-hover hover:-translate-y-0.5">
+              <Link href={`/templates/${template.id}`} className="block group">
+              <div className="relative rounded-2xl bg-card p-5 shadow-card transition-all hover:shadow-card-hover hover:-translate-y-0.5">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-primary/5"><Layers className="h-5 w-5 text-primary" /></div>
                     <div><h3 className="font-semibold">{template.name}</h3><p className="text-xs text-muted-foreground">{template.zones.length} zone(s)</p></div>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(template.id)} className="opacity-0 group-hover:opacity-100 h-8 w-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10" type="button"><Trash2 className="h-4 w-4" /></Button>
+                  <div className="flex items-center gap-1">
+                    <ExternalLink className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <Button variant="ghost" size="sm" onClick={(e) => { e.preventDefault(); handleDelete(template.id); }} className="h-8 w-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10" type="button"><Trash2 className="h-4 w-4" /></Button>
+                  </div>
                 </div>
                 <div className="aspect-video rounded-xl bg-muted relative overflow-hidden">
                   {(template.zones as any[]).map((zone: any) => (                  <div key={zone.id} className="absolute border-2 border-primary/40 bg-primary/8 rounded-lg" style={{ left: `${zone.x}%`, top: `${zone.y}%`, width: `${zone.w}%`, height: `${zone.h}%` }} />))}
                 </div>
               </div>
+              </Link>
               </StaggerWrapper>
             ))}
           </div>
