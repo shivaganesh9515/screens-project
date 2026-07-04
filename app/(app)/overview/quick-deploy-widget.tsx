@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Send, ArrowDownUp } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import { SectionCard } from "@/components/ui/section-card";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,13 +40,63 @@ interface QuickDeployWidgetProps {
 export function QuickDeployWidget({ playlists, screens, groups }: QuickDeployWidgetProps) {
   const [playlist, setPlaylist] = useState<string>("");
   const [target, setTarget] = useState<string>("");
+  const [pushing, setPushing] = useState(false);
+  const supabase = createClient();
 
-  const handlePush = () => {
+  const handlePush = async () => {
     if (!playlist || !target) {
       toast.error("Please select both content and target");
       return;
     }
-    toast.success("Content pushed to screen(s)");
+    setPushing(true);
+
+    // Get current org_id from user session
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error("Not authenticated");
+      setPushing(false);
+      return;
+    }
+
+    const { data: member } = await supabase
+      .from("org_members")
+      .select("org_id")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!member) {
+      toast.error("No org found");
+      setPushing(false);
+      return;
+    }
+
+    // Parse target: "screen-xxx" or "group-xxx"
+    const isGroup = target.startsWith("group-");
+    const targetId = target.replace(isGroup ? "group-" : "screen-", "");
+
+    const scheduleRow: Record<string, any> = {
+      org_id: member.org_id,
+      playlist_id: playlist,
+      is_default: true,
+      priority: 0,
+    };
+
+    if (isGroup) {
+      scheduleRow.group_id = targetId;
+    } else {
+      scheduleRow.screen_id = targetId;
+    }
+
+    const { error } = await supabase.from("schedules").insert(scheduleRow);
+
+    if (error) {
+      toast.error("Failed to push content: " + error.message);
+    } else {
+      toast.success("Content pushed to screen(s)");
+      setPlaylist("");
+      setTarget("");
+    }
+    setPushing(false);
   };
 
   return (

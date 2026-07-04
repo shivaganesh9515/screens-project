@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Building, User, Shield, CreditCard, Trash2, Monitor } from "lucide-react";
+import { Building, User, Shield, CreditCard, Trash2, Monitor, Upload } from "lucide-react";
 
 interface OrgData { id: string; name: string; slug: string; plan: string; timezone: string; }
 interface MemberData { org_id: string; user_id: string; role: string; joined_at: string; }
@@ -22,6 +22,10 @@ export function SettingsForm({ user, org, members, role }: { user: any; org: Org
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("editor");
   const [savingMember, setSavingMember] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const router = useRouter();
   const supabase = createClient();
   const isAdmin = role === "admin";
@@ -33,12 +37,95 @@ export function SettingsForm({ user, org, members, role }: { user: any; org: Org
     else { toast.success("Organization updated"); router.refresh(); } setSavingOrg(false);
   };
 
-  const handleInvite = async (e: React.FormEvent) => { e.preventDefault(); setSavingMember(true); toast.success(`Invitation sent to ${inviteEmail}`); setInviteEmail(""); setSavingMember(false); };
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingMember(true);
+
+    try {
+      const res = await fetch("/api/org/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: inviteEmail, role: inviteRole, orgId: org.id }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.message || data.error || "Failed to invite");
+      } else {
+        toast.success(data.message || `Invitation sent to ${inviteEmail}`);
+        setInviteEmail("");
+        router.refresh();
+      }
+    } catch {
+      toast.error("Network error — could not send invite");
+    }
+
+    setSavingMember(false);
+  };
 
   const handleRemoveMember = async (userId: string) => {
     const { error } = await supabase.from("org_members").delete().eq("user_id", userId).eq("org_id", org.id);
     if (error) toast.error("Failed");
     else { toast.success("Member removed"); router.refresh(); }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingLogo(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${org.id}/logo.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("media")
+        .upload(path, file, { upsert: true });
+
+      if (uploadError) {
+        toast.error("Failed to upload logo");
+        return;
+      }
+
+      const { error: updateError } = await supabase
+        .from("orgs")
+        .update({ logo_path: path })
+        .eq("id", org.id);
+
+      if (updateError) {
+        toast.error("Failed to save logo path");
+      } else {
+        toast.success("Logo updated");
+        router.refresh();
+      }
+    } catch {
+      toast.error("Failed to upload logo");
+    }
+    setUploadingLogo(false);
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password !== confirmPassword) {
+      toast.error("Passwords don't match");
+      return;
+    }
+    if (password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
+    setSavingPassword(true);
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) {
+      toast.error("Failed to update password: " + error.message);
+    } else {
+      toast.success("Password updated successfully");
+      setPassword("");
+      setConfirmPassword("");
+    }
+    setSavingPassword(false);
   };
 
   const sections = [
@@ -49,6 +136,29 @@ export function SettingsForm({ user, org, members, role }: { user: any; org: Org
           <div className="space-y-2"><Label>Organization Name</Label><Input value={orgName} onChange={(e) => setOrgName(e.target.value)} disabled={!isAdmin} className="h-11 rounded-lg" /></div>
           <div className="space-y-2"><Label>Slug</Label><Input value={org.slug} disabled className="h-11 rounded-lg text-muted-foreground" /></div>
           <div className="space-y-2"><Label>Timezone</Label><Input value={timezone} onChange={(e) => setTimezone(e.target.value)} disabled={!isAdmin} className="h-11 rounded-lg" /></div>
+          {isAdmin && (
+            <div className="space-y-2">
+              <Label>Organization Logo</Label>
+              <div className="flex items-center gap-3">
+                <label className="cursor-pointer">
+                  <div className="flex h-11 items-center gap-2 rounded-xl border border-border bg-background px-4 text-sm text-muted-foreground hover:bg-muted transition-colors">
+                    <Upload className="h-4 w-4" />
+                    {uploadingLogo ? "Uploading..." : "Upload Logo"}
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    disabled={uploadingLogo}
+                    className="hidden"
+                  />
+                </label>
+                {org.logo_path && (
+                  <span className="text-xs text-muted-foreground">Logo uploaded</span>
+                )}
+              </div>
+            </div>
+          )}
           {isAdmin && <Button onClick={handleSaveOrg} disabled={savingOrg} className="rounded-full h-10">{savingOrg ? "Saving..." : "Save Changes"}</Button>}
         </div>
       )
@@ -84,6 +194,32 @@ export function SettingsForm({ user, org, members, role }: { user: any; org: Org
         <div className="space-y-4">
           <div className="space-y-2"><Label>Email</Label><Input value={user.email} disabled className="h-11 rounded-lg text-muted-foreground" /></div>
           <div className="space-y-2"><Label>Role</Label><Input value={role} disabled className="h-11 rounded-lg text-muted-foreground" /></div>
+          <div className="pt-2 border-t border-border">
+            <form onSubmit={handleChangePassword} className="space-y-3">
+              <Label>Change Password</Label>
+              <Input
+                type="password"
+                placeholder="New password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="h-11 rounded-lg"
+                minLength={6}
+                required
+              />
+              <Input
+                type="password"
+                placeholder="Confirm new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="h-11 rounded-lg"
+                minLength={6}
+                required
+              />
+              <Button type="submit" disabled={savingPassword} className="rounded-full h-10">
+                {savingPassword ? "Updating..." : "Update Password"}
+              </Button>
+            </form>
+          </div>
         </div>
       )
     },
