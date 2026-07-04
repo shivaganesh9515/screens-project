@@ -39,6 +39,46 @@
 - UI components: `components/ui/` (shadcn/ui)
 - Schema: `supabase/migrations/00001_schema.sql`
 
+## Memory Update Rules
+
+### When to Update Memory
+After any significant change, update the relevant memory files:
+
+| Change Type | Files to Update |
+|-------------|-----------------|
+| New feature | `FILE-STRUCTURE.md`, `COMPONENTS.md`, `CHANGELOG.md` |
+| Bug fix | `BUGS-AND-FIXES.md`, `CHANGELOG.md` |
+| New API route | `API-ROUTES.md`, `FILE-STRUCTURE.md` |
+| Task completion | `TEAM-TASKS.md`, `SESSION-LOG.md` |
+| New decision | `SESSION-LOG.md`, relevant file |
+| Schema change | `SCHEMA-REFERENCE.md`, `CHANGELOG.md` |
+
+### How to Update
+1. Open the relevant memory file
+2. Add new section or update existing
+3. Include: what, why, who, when
+4. Commit with message: "docs: update memory for [change]"
+
+### Session Log Format
+```markdown
+## YYYY-MM-DD
+
+### What Was Done
+- [description]
+
+### Why It Was Done
+- [reason]
+
+### Who Did It
+- [name]
+
+### Bugs Found/Fixed
+- [list]
+
+### Decisions Made
+- [list]
+```
+
 ## When Blocked
 - Need real Supabase credentials? Ask harshitha
 - Need to know a column name? Check schema file
@@ -52,3 +92,4 @@
 - Player playback must work
 - Test against real Supabase (not mock)
 - Merge order: harshitha → srinitha → abhinya → harshitha (player)
+- Memory files must be up to date

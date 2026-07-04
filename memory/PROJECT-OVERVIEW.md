@@ -32,3 +32,13 @@ All tables are in `supabase/migrations/00001_schema.sql`. The types are in `lib/
 - harshitha needs to wire real Supabase before anyone can test end-to-end
 - 4 bugs confirmed, 2 features not built yet
 - See `BUGS-AND-FIXES.md` for details
+
+## Dependencies
+See `package.json` for full list. Key ones:
+- next@16.2.0
+- react@19.2.0
+- @supabase/supabase-js@2.52.1
+- @fullcalendar/react@6.1.17
+- @dnd-kit/core@6.3.1
+- tailwindcss@4.1.11
+- typescript@5.8.3
