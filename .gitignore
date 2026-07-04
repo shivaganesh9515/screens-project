@@ -35,6 +35,3 @@ next-env.d.ts
 
 # supabase
 supabase/.temp/
-
-# project memory (local context)
-memory/
