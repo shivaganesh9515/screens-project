@@ -48,15 +48,30 @@ export default function SignupPage() {
 
     const slug = orgName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     const { error: orgError } = await supabase.from("orgs").insert({ name: orgName, slug });
-    if (orgError) { setError(orgError.message); setLoading(false); return; }
 
-    const { data: orgData } = await supabase.from("orgs").select("id").eq("slug", slug).single();
-    if (orgData) {
-      await supabase.from("org_members").insert({ org_id: orgData.id, user_id: authData.user.id, role: "admin" });
+    if (orgError) {
+      if (orgError.code === "23505") {
+        setError("Organization name already exists. Please choose another organization name.");
+      } else {
+        setError("Failed to create organization. Please try again.");
+      }
+       setLoading(false);
+       return;
     }
-
-    router.push("/overview");
-    router.refresh();
+    const { data: orgData, error: orgFetchError } = await supabase
+      .from("orgs").select("id").eq("slug", slug).single();
+    if (orgFetchError || !orgData) {
+      setError("Failed to create organization. Please try again.");
+      setLoading(false);
+      return;
+    }
+    const { error: memberError } = await supabase.from("org_members")
+      .insert({ org_id: orgData.id, user_id: authData.user.id, role: "admin" });
+    if (memberError) {
+      setError("Account created but could not join organization. Please contact support.");
+      setLoading(false);
+      return;
+    }
   };
 
   const PasswordCheck = ({ passed, label }: { passed: boolean; label: string }) => (
