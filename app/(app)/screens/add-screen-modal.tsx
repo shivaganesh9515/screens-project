@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +22,7 @@ export function AddScreenModal({ groups }: { groups: Group[] }) {
   const [loading, setLoading] = useState(false);
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const router = useRouter();
   const supabase = createClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,16 +45,18 @@ export function AddScreenModal({ groups }: { groups: Group[] }) {
     if (pairingCode) { navigator.clipboard.writeText(pairingCode); setCopied(true); setTimeout(() => setCopied(false), 2000); }
   };
 
-  const handleClose = () => { setOpen(false); setName(""); setGroupId(""); setPairingCode(null); };
+  const handleClose = () => { setOpen(false); setName(""); setGroupId(""); setPairingCode(null); router.refresh(); };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger>
-        <Button className="rounded-xl gap-2 h-10 shadow-sm">
-          <Plus className="h-4 w-4" />
-          Add Screen
-        </Button>
-      </DialogTrigger>
+      <DialogTrigger
+        render={
+          <Button className="rounded-xl gap-2 h-10 shadow-sm">
+            <Plus className="h-4 w-4" />
+            Add Screen
+          </Button>
+        }
+      />
       <DialogContent className="sm:max-w-md rounded-2xl shadow-card-elevated p-0 gap-0">
         <DialogHeader className="px-6 pt-6 pb-2">
           <DialogTitle className="text-lg font-semibold">{pairingCode ? "Pairing Code" : "Add Screen"}</DialogTitle>
