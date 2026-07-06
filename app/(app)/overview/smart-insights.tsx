@@ -7,7 +7,6 @@ interface SmartInsightsProps {
   totalScreens: number;
   onlineScreens: number;
   offlineScreens: number;
-  totalImpressions: number;
   topContentName?: string;
   topContentPlays?: number;
 }
@@ -16,7 +15,6 @@ export function SmartInsights({
   totalScreens,
   onlineScreens,
   offlineScreens,
-  totalImpressions,
   topContentName,
   topContentPlays,
 }: SmartInsightsProps) {

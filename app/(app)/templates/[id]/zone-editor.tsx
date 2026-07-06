@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -16,7 +16,14 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ArrowLeft, Save, Layout, Play, Plus, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Save,
+  Layout,
+  Play,
+  Plus,
+  Trash2,
+} from "lucide-react";
 
 interface Zone {
   id: string;
@@ -45,11 +52,44 @@ interface ZoneEditorProps {
   orgId: string;
 }
 
+const MIN_ZONE_PCT = 10;
+
+type ResizeHandle =
+  | "nw" | "n" | "ne"
+  | "w"  | "e"
+  | "sw" | "s" | "se";
+
+const HANDLE_POSITIONS: { dir: ResizeHandle; cx: number; cy: number }[] = [
+  { dir: "nw", cx: 0, cy: 0 },
+  { dir: "n",  cx: 50, cy: 0 },
+  { dir: "ne", cx: 100, cy: 0 },
+  { dir: "w",  cx: 0, cy: 50 },
+  { dir: "e",  cx: 100, cy: 50 },
+  { dir: "sw", cx: 0, cy: 100 },
+  { dir: "s",  cx: 50, cy: 100 },
+  { dir: "se", cx: 100, cy: 100 },
+];
+
+const HANDLE_CURSORS: Record<ResizeHandle, string> = {
+  nw: "nwse-resize",
+  n: "ns-resize",
+  ne: "nesw-resize",
+  w: "ew-resize",
+  e: "ew-resize",
+  sw: "nesw-resize",
+  s: "ns-resize",
+  se: "nwse-resize",
+};
+
 let nextZoneNum = 0;
 
 function generateZoneId(): string {
   nextZoneNum++;
   return `z${Date.now()}_${nextZoneNum}`;
+}
+
+function clamp(val: number, min: number, max: number): number {
+  return Math.round(Math.min(max, Math.max(min, val)));
 }
 
 export function ZoneEditor({ template: initialTemplate, playlists, orgId }: ZoneEditorProps) {
@@ -59,15 +99,23 @@ export function ZoneEditor({ template: initialTemplate, playlists, orgId }: Zone
   });
   const [name, setName] = useState(initialTemplate.name);
   const [saving, setSaving] = useState(false);
+  const [dragging, setDragging] = useState<{
+    zoneId: string;
+    handle: ResizeHandle;
+    startX: number;
+    startY: number;
+    startZone: Zone;
+  } | null>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const supabase = createClient();
 
-  const updateZone = (zoneId: string, updates: Partial<Zone>) => {
+  const updateZone = useCallback((zoneId: string, updates: Partial<Zone>) => {
     setTemplate((prev) => ({
       ...prev,
       zones: prev.zones.map((z) => (z.id === zoneId ? { ...z, ...updates } : z)),
     }));
-  };
+  }, []);
 
   const removeZone = (zoneId: string) => {
     setTemplate((prev) => ({
@@ -93,8 +141,6 @@ export function ZoneEditor({ template: initialTemplate, playlists, orgId }: Zone
 
   const handleSave = async () => {
     setSaving(true);
-
-    // Update name and zones
     const { error } = await supabase
       .from("templates")
       .update({
@@ -111,6 +157,96 @@ export function ZoneEditor({ template: initialTemplate, playlists, orgId }: Zone
     }
     setSaving(false);
   };
+
+  const handlePointerDown = useCallback(
+    (zoneId: string, handle: ResizeHandle, e: React.PointerEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      canvas.setPointerCapture(e.pointerId);
+
+      const zone = template.zones.find((z) => z.id === zoneId);
+      if (!zone) return;
+
+      setDragging({
+        zoneId,
+        handle,
+        startX: e.clientX,
+        startY: e.clientY,
+        startZone: { ...zone },
+      });
+    },
+    [template.zones]
+  );
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!dragging || !canvasRef.current) return;
+
+      const canvas = canvasRef.current;
+      const rect = canvas.getBoundingClientRect();
+      const canvasW = rect.width;
+      const canvasH = rect.height;
+      if (canvasW <= 0 || canvasH <= 0) return;
+
+      const dx = ((e.clientX - dragging.startX) / canvasW) * 100;
+      const dy = ((e.clientY - dragging.startY) / canvasH) * 100;
+
+      const z = dragging.startZone;
+      let newX = z.x;
+      let newY = z.y;
+      let newW = z.w;
+      let newH = z.h;
+
+      const handle = dragging.handle;
+
+      // Horizontal changes
+      if (handle.includes("e")) {
+        newW = z.w + dx;
+      }
+      if (handle.includes("w")) {
+        newW = z.w - dx;
+        newX = z.x + dx;
+      }
+
+      // Vertical changes
+      if (handle.includes("s")) {
+        newH = z.h + dy;
+      }
+      if (handle.includes("n")) {
+        newH = z.h - dy;
+        newY = z.y + dy;
+      }
+
+      // Enforce minimums
+      if (newW < MIN_ZONE_PCT) {
+        if (handle.includes("w")) {
+          newX = z.x + z.w - MIN_ZONE_PCT;
+        }
+        newW = MIN_ZONE_PCT;
+      }
+      if (newH < MIN_ZONE_PCT) {
+        if (handle.includes("n")) {
+          newY = z.y + z.h - MIN_ZONE_PCT;
+        }
+        newH = MIN_ZONE_PCT;
+      }
+
+      // Clamp within canvas bounds
+      newX = clamp(newX, 0, 100 - MIN_ZONE_PCT);
+      newY = clamp(newY, 0, 100 - MIN_ZONE_PCT);
+      if (newX + newW > 100) newW = 100 - newX;
+      if (newY + newH > 100) newH = 100 - newY;
+
+      updateZone(dragging.zoneId, { x: Math.round(newX), y: Math.round(newY), w: Math.round(newW), h: Math.round(newH) });
+    },
+    [dragging, updateZone]
+  );
+
+  const handlePointerUp = useCallback(() => {
+    setDragging(null);
+  }, []);
 
   const zoneColors = [
     "border-blue-400 bg-blue-50/40",
@@ -156,29 +292,69 @@ export function ZoneEditor({ template: initialTemplate, playlists, orgId }: Zone
         {/* Canvas preview */}
         <div className="rounded-2xl bg-card p-6 shadow-card">
           <Label className="mb-4 block">Layout Preview</Label>
-          <div className="aspect-video rounded-xl bg-muted relative overflow-hidden border border-border">
-            {template.zones.map((zone, i) => (
-              <div
-                key={zone.id}
-                className={`absolute rounded-lg border-2 ${zoneColors[i % zoneColors.length]} transition-all hover:ring-2 hover:ring-primary/30`}
-                style={{
-                  left: `${zone.x}%`,
-                  top: `${zone.y}%`,
-                  width: `${zone.w}%`,
-                  height: `${zone.h}%`,
-                }}
-              >
-                <div className="flex h-full flex-col items-center justify-center p-2 text-center">
-                  <Layout className="h-5 w-5 text-muted-foreground/60" />
-                  <span className="mt-1 text-[10px] font-medium text-muted-foreground">
-                    {zone.id}
-                  </span>
+          <div
+            ref={canvasRef}
+            className="aspect-video rounded-xl bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(0,0,0,0.02)_10px,rgba(0,0,0,0.02)_20px)] relative overflow-hidden border border-border select-none"
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            style={{ touchAction: "none" }}
+          >
+            {template.zones.map((zone, i) => {
+              const color = zoneColors[i % zoneColors.length];
+              return (
+                <div
+                  key={zone.id}
+                  className={`absolute rounded-lg border-2 ${color} transition-shadow hover:ring-2 hover:ring-primary/30 ${dragging?.zoneId === zone.id ? "ring-2 ring-primary/40 shadow-lg z-10" : ""}`}
+                  style={{
+                    left: `${zone.x}%`,
+                    top: `${zone.y}%`,
+                    width: `${zone.w}%`,
+                    height: `${zone.h}%`,
+                    touchAction: "none",
+                  }}
+                >
+                  {/* Zone label */}
+                  <div className="flex h-full flex-col items-center justify-center p-2 text-center pointer-events-none">
+                    <Layout className="h-5 w-5 text-muted-foreground/60" />
+                    <span className="mt-1 text-[10px] font-medium text-muted-foreground">
+                      {zone.id}
+                    </span>
+                    <span className="text-[9px] text-muted-foreground/60">
+                      {zone.w}×{zone.h}
+                    </span>
+                  </div>
+
+                  {/* Resize handles */}
+                  {HANDLE_POSITIONS.map(({ dir, cx, cy }) => (
+                    <div
+                      key={dir}
+                      className="absolute w-3.5 h-3.5 -translate-x-1/2 -translate-y-1/2 z-20 group"
+                      style={{
+                        left: `${cx}%`,
+                        top: `${cy}%`,
+                        cursor: HANDLE_CURSORS[dir],
+                        touchAction: "none",
+                      }}
+                      onPointerDown={(e) => handlePointerDown(zone.id, dir, e)}
+                    >
+                      <div className="w-full h-full rounded-full border-2 border-white bg-foreground/60 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  ))}
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {template.zones.length === 0 && (
               <div className="flex h-full items-center justify-center">
                 <p className="text-sm text-muted-foreground">No zones — click &quot;Add Zone&quot; to create one</p>
+              </div>
+            )}
+            {/* Resize hint */}
+            {template.zones.length > 0 && !dragging && (
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 pointer-events-none">
+                <span className="text-[10px] text-muted-foreground/50 bg-background/60 px-2 py-0.5 rounded-full">
+                  Hover a zone edge and drag to resize
+                </span>
               </div>
             )}
           </div>
@@ -194,11 +370,11 @@ export function ZoneEditor({ template: initialTemplate, playlists, orgId }: Zone
               <p className="text-xs text-muted-foreground/60">Click &quot;Add Zone&quot; above</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
               {template.zones.map((zone, i) => (
                 <div
                   key={zone.id}
-                  className="rounded-xl bg-card px-4 py-3.5 shadow-sm border border-border/50"
+                  className={`rounded-xl bg-card px-4 py-3.5 shadow-sm border border-border/50 transition-all ${dragging?.zoneId === zone.id ? "ring-2 ring-primary/30 border-primary/30" : ""}`}
                 >
                   <div className="flex items-center gap-3">
                     <div
@@ -222,31 +398,33 @@ export function ZoneEditor({ template: initialTemplate, playlists, orgId }: Zone
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                  <div className="mt-3">
-                    <Select
-                      value={zone.playlist_id ?? ""}
-                      onValueChange={(v) => updateZone(zone.id, { playlist_id: v || null })}
-                    >
-                      <SelectTrigger className="w-full h-9 rounded-lg">
-                        <SelectValue placeholder="Assign a playlist..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__" disabled>
-                          {playlists.length === 0
-                            ? "No playlists available"
-                            : "Assign a playlist..."}
-                        </SelectItem>
-                        <SelectItem value="">None</SelectItem>
-                        {playlists.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            <div className="flex items-center gap-2">
-                              <Play className="h-3.5 w-3.5" />
-                              {p.name}
-                            </div>
+                  <div className="mt-3 flex gap-2">
+                    <div className="flex-1">
+                      <Select
+                        value={zone.playlist_id ?? ""}
+                        onValueChange={(v) => updateZone(zone.id, { playlist_id: v || null })}
+                      >
+                        <SelectTrigger className="w-full h-9 rounded-lg text-xs">
+                          <SelectValue placeholder="Assign a playlist..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__" disabled>
+                            {playlists.length === 0
+                              ? "No playlists available"
+                              : "Assign a playlist..."}
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          <SelectItem value="">None</SelectItem>
+                          {playlists.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              <div className="flex items-center gap-2">
+                                <Play className="h-3.5 w-3.5" />
+                                {p.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
               ))}

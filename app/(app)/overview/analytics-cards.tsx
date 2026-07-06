@@ -24,7 +24,6 @@ export function AnalyticsCards({
   offlineScreens,
   totalMedia,
   totalImpressions,
-  avgPlaybackRate = 0,
   screenTrend = 12,
   onlineTrend = 5,
   offlineTrend = -3,

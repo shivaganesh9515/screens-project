@@ -177,9 +177,9 @@ export function QuickDeployWidget({ playlists, screens, groups }: QuickDeployWid
         </div>
 
         {/* CTA */}
-        <Button className="w-full gap-2" onClick={handlePush}>
+        <Button className="w-full gap-2" onClick={handlePush} disabled={pushing}>
           <Send className="h-4 w-4" />
-          Push to Screen
+          {pushing ? "Pushing..." : "Push to Screen"}
         </Button>
       </div>
     </SectionCard>

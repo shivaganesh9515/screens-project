@@ -1,6 +1,6 @@
 "use client";
 
-import { cn, formatRelativeTime } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { Monitor, Wifi, WifiOff } from "lucide-react";
 import { StaggerWrapper } from "@/hooks/useStaggerAnimation";
 

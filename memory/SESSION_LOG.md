@@ -6,6 +6,34 @@
 
 ---
 
+## Session 3 — July 6, 2026
+
+**AI Model:** deepseek/deepseek-v4-flash (via Codebuff)  
+**Branch:** `abhinya`
+
+### What was done
+- **Fixed TypeScript build error** — added `logo_path` to `OrgData` interface in `settings-form.tsx`
+- **Fixed 7 lint issues** — removed unused imports (`Monitor` x2, `useCallback`, `formatRelativeTime`), removed unused props (`avgPlaybackRate`), restored `orgId` destructuring where parent passes it
+- **Computed `storageUsed` from real data** — new parallel DB query sums all `media_items.size_bytes`, computes % against 1GB limit (replaced hardcoded `64`)
+- **Computed `contentFreshness` from real data** — % of media items played in last 7 days from `play_logs` data (replaced hardcoded `87`)
+- **Added drag-to-resize zones on template canvas** — 8 resize handles per zone (corners + edges), pointer event-based drag with percentage math, minimum size clamping (10%), bounds clamping, visual feedback
+- **Fixed performance concern** — wrapped `updateZone` in `useCallback` to stabilize `handlePointerMove` deps
+- **Build verified** — `npm run build` passes with zero errors
+
+### State at end of session
+- All abhinya tasks fully complete (4 tasks + all pending/stretch items)
+- Build passes cleanly
+- Changes committed and pushed to `abhinya` branch
+
+### Problems encountered
+- Several implicit-any TS errors needed explicit type annotations
+- The `reduce<number>` generic syntax doesn't work on untyped arrays from mock client — used explicit parameter types instead
+
+### Next session should
+- Work on P0 priorities from NEXT_STEPS.md: connect real Supabase, build player playback, or fix bugs from harshitha/srinitha's lists
+
+---
+
 ## Session 2 — July 4, 2026
 
 **AI Model:** deepseek/deepseek-v4-flash (via Codebuff)  
