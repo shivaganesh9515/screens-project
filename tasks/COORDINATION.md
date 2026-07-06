@@ -1,50 +1,39 @@
-# Team Coordination — Simple Version
+# Team Coordination — Franchise/Advertiser Milestone
 
-Most of the app is already built (against the real schema in `supabase/migrations/00001_schema.sql`). This isn't a "build everything from scratch" project anymore — it's "connect real Supabase, fix real gaps, build the two genuinely-missing pieces (the player app's actual playback, and the template zone editor)."
+This is a new, bigger milestone on top of the existing screens/playlists/schedules/media/templates engine (which is done and merged into `master`). It adds a 3-tier structure: **main admin** (whole platform) → **franchise** (a territory, the "all-rounder") → **advertiser** (only sees their own ads, can target multiple franchises).
 
 ## Who Builds What
 
-| Person | Owns | Status | Depends On |
-|--------|--------|--------|------------|
-| **harshitha** | Database/Supabase setup, screens + pairing, schedules, player app | DB schema DONE, needs real Supabase creds; screens DONE w/ small fixes; schedules DONE w/ 2 fixes; player app MOSTLY NOT STARTED | Nothing — starts first (needs to wire real Supabase before others can test against real data) |
-| **srinitha** | Login/signup/reset, media upload, analytics | Auth DONE w/ 2 small bugs; media PARTIAL (folder/tag UI, storage cleanup); analytics DONE w/ polish items | harshitha's real Supabase connection |
-| **abhinya** | Dashboard home, playlists, templates (zone editor), settings | Dashboard DONE w/ polish; playlists DONE; templates PARTIAL — zone editor is the biggest real gap in the whole app; settings PARTIAL (logo, invite, password) | harshitha's real Supabase connection |
+| Person | Branch | Owns | Depends On |
+|--------|--------|------|------------|
+| **ashwanth** | `ashwanth` | Data model foundation — new tables/columns for screens metadata, franchises, advertisers, ads, GPS logging, RLS | Nothing — starts first, push early even if incomplete |
+| **soumya** | `soumya` | Screen registration UI (unique-number verification, orientation/size/type/connectivity fields) | ashwanth's `screens` columns |
+| **manaswini** | `manaswini` | Live map on home page, GPS tracking from player app, offline detection | ashwanth's `screen_locations` table |
+| **abhinaya** | `abhinaya` | Analytics: uptime/downtime history, per-ad play counts, advertiser-scoped analytics view | ashwanth's `ad_id` on `play_logs`, possibly a new status-log table |
+| **srinitha** | `srinitha` | Media (orientation filter, live video links), playlist per-item repeat count, screensaver, read-only invites | Mostly independent, can start immediately |
+| **harshitha** | `harshitha` | Three dashboards (main admin / franchise / advertiser), RBAC routing, two-tier approval workflow | ashwanth's `franchises`/`advertisers`/`ads` tables |
 
----
+Full task breakdown for each person is in `tasks/<name>-TASKS.md`.
 
 ## Real Dependency Chain
 
-1. **harshitha connects real Supabase** (her Task 1) — until this is done, everyone is developing against the mock in-memory client (`lib/supabase/mock-client.ts`), which is fine for UI work but nobody's changes are actually persisted or provable end-to-end. Do this first.
-2. **harshitha fixes the group-count bug and the group_id-on-schedules bug** — abhinya's Quick Deploy fix (Task 1) copies the same insert shape `schedule-calendar.tsx` uses, so wait for that bug to be fixed first or you'll copy the same mistake.
-3. **srinitha's media folder/tag fields** feed abhinya's template zone editor only indirectly (templates bind zones to *playlists*, not media directly) — no hard dependency, but if srinitha adds tag filtering to media, it makes playlist-building easier for whoever's testing templates.
-4. **harshitha's player app (Task 4)** depends on abhinya's template zone editor (Task 3) being functional if you want to test template-based (multi-zone) playback end-to-end — a plain playlist-based schedule can be tested without templates. Coordinate: harshitha can build/test playlist playback first, then template playback once zones have real `playlist_id` bindings.
-5. **srinitha's analytics Fix 2 (real historical uptime)** explicitly depends on a decision from harshitha about whether/how to log online/offline history — don't build this without talking to her first (see srinitha's Task 3, Fix 2).
-
----
+1. **ashwanth's schema** unblocks almost everyone — get a first migration pushed fast, even partial, and document new columns/tables in `memory/SCHEMA-REFERENCE.md` as you go so nobody guesses column names.
+2. **harshitha's RBAC/routing shell** (Task 1 in her file) is the second blocker — soumya, manaswini, and abhinaya all need a way to check "what's this user's role and franchise scope" rather than each inventing their own check.
+3. **soumya's screen registration** and **manaswini's live map/GPS** touch overlapping files (`app/(app)/screens/`) — coordinate directly if you're both editing the same component in the same week.
+4. **abhinaya's ad play-count analytics** and **harshitha's approval workflow** both touch the `ads`/`ad_franchise_targets` tables — an ad only has plays to count once harshitha's approval flow actually creates real schedules from it. Sequence: harshitha's approval-to-schedule logic first, then abhinaya's play-count queries.
+5. **srinitha's work is the most independent** — start immediately, minimal blocking dependencies.
 
 ## What to Do If Blocked
 
 | Problem | Do This |
 |---------|---------|
-| `.env.local` still blank / seeing "Using mock client" in the terminal | Tell harshitha — she owns getting real Supabase credentials into `.env.local` |
-| Need to know a real column name | Check `supabase/migrations/00001_schema.sql` or `lib/types/database.ts` — don't guess, don't reuse old task-file names (`ads`, `screen_saver`, `vehicle_number`, `lat`/`lng` etc. don't exist) |
-| Need test screens/media/playlists to work against | Create them yourself through the UI — mock mode seeds some fake data (`lib/supabase/mock-data.ts`) but once real Supabase is connected you'll need to create real rows |
-| Not sure what to build | Read your `-TASKS.md` file — every task says DONE / PARTIAL / NOT STARTED at the top, with exact file paths |
+| Need a column/table that doesn't exist yet | Check `memory/SCHEMA-REFERENCE.md` first; if it's genuinely missing and blocking you, add it yourself in your own migration and flag it to ashwanth so there's no conflict |
+| Not sure what to build | Read your `-TASKS.md` file — exact file paths and field names are listed |
 | Git conflict | Tell the team lead |
-
----
-
-## Daily Check-in Questions
-
-1. What did you finish yesterday?
-2. What are you working on today?
-3. Are you stuck on anything?
-
----
 
 ## Git Rules
 
-- Work ONLY on your branch
+- Work ONLY on your own branch
 - NEVER push to master
 - Push with: `git push origin <your-branch>`
-- Commit with clear messages like "add folder/tag fields to media upload" or "build template zone editor"
+- Pull `master` first before branching off, so you start from the latest merged state
