@@ -1,10 +1,11 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AnalyticsDashboard } from "./analytics-dashboard";
 
 export default async function AnalyticsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user) redirect("/login");
 
   const { data: member } = await supabase
     .from("org_members")
@@ -12,7 +13,9 @@ export default async function AnalyticsPage() {
     .eq("user_id", user.id)
     .single();
 
-  if (!member) return null;
+  if (!member) {
+    redirect("/setup");
+  }
 
   const orgId = member.org_id;
 

@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { MediaGrid } from "./media-grid";
 import { MediaUpload } from "./media-upload";
@@ -5,7 +6,7 @@ import { MediaUpload } from "./media-upload";
 export default async function MediaPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user) redirect("/login");
 
   const { data: member } = await supabase
     .from("org_members")
@@ -13,7 +14,9 @@ export default async function MediaPage() {
     .eq("user_id", user.id)
     .single();
 
-  if (!member) return null;
+  if (!member) {
+    redirect("/setup");
+  }
 
   const { data: mediaItems } = await supabase
     .from("media_items")
