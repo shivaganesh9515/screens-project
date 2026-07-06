@@ -1,34 +1,34 @@
-# harshitha — Backend: Franchises, Advertisers, Ads, Roles & Approval Logic
+# harshitha's Tasks — Backend
 
-**Branch:** `harshitha`
-**Role:** Backend
-**Status:** NOT STARTED
+**Your role:** Franchises, Advertisers, Ads, and Approvals (the backend/database side)
 
-## Tasks
+## What you're building, in plain words
+Right now the app only knows about one company (one "org"). We need it to understand **franchises** (local territories), **advertisers** (people who pay to show ads), and a **2-step approval system** before any ad goes live.
 
-### 1. New tables
-Migration file: `supabase/migrations/00003_franchise_advertiser.sql`
-- `franchises`: `id`, `org_id` (references `orgs`), `name`, `territory_area`, `manager_user_id` (references `auth.users`), `created_at`
-- `advertisers`: `id`, `user_id` (references `auth.users`), `name`/`company_name`, `created_at` — independent accounts, not scoped to one org/franchise
-- `ads`: `id`, `advertiser_id`, `media_item_id`/`playlist_item_id` (coordinate with srinitha on final media shape), `status` (`pending`/`approved`/`rejected`), `created_at`
-- `ad_franchise_targets`: `ad_id`, `franchise_id`, `status` — approval is **per-franchise** (an ad targeting 3 franchises can be approved in one and still pending in another)
-- Franchise's own ads (need main-admin approval, not franchise approval): add `submitted_by_franchise_id` nullable column on `ads`, or a separate table if cleaner — your call, just document it.
+## Your tasks
 
-### 2. Roles
-- Extend `org_members.role` CHECK constraint: add `main_admin`, `franchise_manager` (keep existing `admin/editor/viewer` if still needed elsewhere, or fold them in — your call, document the final role list clearly since manaswini's dashboard UI gates on this).
+**1. Create the new database tables**
+- `franchises` — one row per territory (name, which org it belongs to, who manages it)
+- `advertisers` — one row per advertiser account
+- `ads` — one row per ad someone submits (has a status: pending / approved / rejected)
+- `ad_franchise_targets` — since one ad can target multiple franchises, this tracks approval **separately for each franchise** (e.g. approved in Hyderabad, still pending in Chennai)
 
-### 3. Approval workflow logic
-- API routes / server actions for: submit ad, approve/reject per franchise target, franchise submits their own ad for main-admin approval.
-- **On approval**, create the real `schedules`/`playlist_items` rows so the ad actually gets scheduled onto that franchise's screens — this is the step that makes the approval meaningful, not just a status flip.
+**2. Add new user roles**
+- Right now roles are just admin/editor/viewer. Add `main_admin` and `franchise_manager` so we can tell who's who.
 
-### 4. RLS policies
-- `advertisers`: user sees only their own row (`user_id = auth.uid()`)
-- `ads` / `ad_franchise_targets`: advertiser sees only their own ads; franchise_manager sees only ads targeting their franchise; main_admin sees all
-- `franchises`: franchise_manager sees only their own; main_admin sees all
-- **Fix the existing `orgs_select_auth` policy** from `00002_rls_fix.sql` — right now any authenticated user can read every org. Scope it to org members only.
+**3. Build the approval logic**
+- Advertiser submits an ad → goes to the franchise manager(s) they targeted → they approve or reject.
+- Franchise wants to run their own ad → goes to the main admin to approve.
+- **Important:** once approved, actually create the real schedule so the ad plays on screens — don't just flip a status flag and stop there.
 
-### 5. Document everything
-- Update `memory/SCHEMA-REFERENCE.md` with every new table/column/role as you add it — manaswini and soumya are building UI against this and shouldn't have to guess.
+**4. Lock down access (RLS)**
+- Advertisers should only ever see their own ads.
+- Franchise managers should only see ads for their own territory.
+- Main admin sees everything.
+- Also fix a bug from last time: right now any logged-in person can see every org's data — that needs to be locked down too.
 
-## Deliverable
-Working tables, roles, RLS, and API logic for franchises/advertisers/ads and the two-tier approval workflow (advertiser→franchise, franchise→main admin), documented so the frontend side can build against it.
+**5. Write down what you built**
+- After each table/column you add, jot it in `memory/SCHEMA-REFERENCE.md` so others aren't guessing names.
+
+## Done means
+Franchises, advertisers, ads, and the approval flow all work end-to-end, and it's written down clearly for the rest of the team.

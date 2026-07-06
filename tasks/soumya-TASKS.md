@@ -1,36 +1,35 @@
-# soumya — Frontend: Screen Registration, Media & Playlist UI
+# soumya's Tasks — Frontend
 
-**Branch:** `soumya`
-**Role:** Frontend
-**Status:** NOT STARTED
-**Depends on:** abhinaya's `screens` columns (Task 1 in her file) and srinitha's media/playlist backend changes — check `memory/SCHEMA-REFERENCE.md` before starting each piece, or coordinate directly if it's not pushed yet.
+**Your role:** Screen, Media & Playlist Screens (what the user sees and clicks)
 
-## Tasks
+## What you're building, in plain words
+The forms and pages where people register screens, upload media, and build playlists — updated to match the new fields the backend team is adding.
 
-### 1. Rework "Add Screen" flow around the unique number
-File: `app/(app)/screens/add-screen-modal.tsx`
-- Replace the old pairing-code-first flow: admin enters the screen's **pre-printed unique number** to register/claim it.
-- Form fields: unique number, orientation (landscape/portrait toggle), size type, screen type (static/bus/auto), connectivity type (SIM/WiFi), location (lat/lng — static screens only, skip for bus/auto since those get GPS live from manaswini's map work).
+## Your tasks
 
-### 2. Screens list/table — show the new metadata
-File: `app/(app)/screens/screens-table.tsx`, `app/(app)/screens/page.tsx`
-- Add columns/badges: orientation, screen type icon (static/bus/auto), connectivity type.
-- Filter/sort by screen type and orientation.
+**1. New "Add Screen" form**
+- Instead of the old pairing code, the admin now types in the screen's **unique number** to register it.
+- Add fields: orientation, size type, screen type (static/bus/auto), connectivity (SIM/WiFi), and location (only needed for static screens, skip it for bus/auto).
 
-### 3. Media upload UI
-- Add orientation filter to the media grid/browser (portrait/landscape).
-- Add a "paste a live stream URL" option alongside file upload (srinitha's backend adds `source_type`/`external_url` — build the toggle/form for it).
+**2. Update the screens list**
+- Show the new details as columns or little badges (orientation, screen type icon, connectivity).
+- Let people filter/sort by screen type and orientation.
 
-### 4. Playlist builder UI
-File: `app/(app)/playlists/[id]/playlist-builder.tsx`
-- Add a "number of times" input per playlist item (per-item repeat count, srinitha's `repeat_count` column).
+**3. Update the media upload page**
+- Add a filter for portrait vs landscape.
+- Add an option to paste a live video link instead of uploading a file.
 
-### 5. Screensaver setting UI
-- Simple admin settings section: pick a media item as the screensaver/fallback content (srinitha's backend field).
+**4. Update the playlist builder**
+- Add a "play this many times" input next to each video in a playlist.
 
-### 6. Read-only invite UI
-File: `app/(app)/settings/settings-form.tsx`
-- Add a "read only" option to the invite-user form (maps to existing `viewer` role).
+**5. Add a screensaver picker**
+- Simple settings section where admin picks which media item is the screensaver.
 
-## Deliverable
-Updated add-screen flow with unique-number verification and new metadata fields, plus media/playlist/screensaver/invite UI updates.
+**6. Add "read only" option when inviting a user**
+- Just a toggle/dropdown in the invite form.
+
+## Note
+Some of this depends on the backend team (harshitha/srinitha/abhinaya) adding the fields first — check `memory/SCHEMA-REFERENCE.md` before you start each piece, or just ask them directly if it's not there yet.
+
+## Done means
+All the forms/pages above are updated and working with the new fields.

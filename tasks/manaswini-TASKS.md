@@ -1,44 +1,43 @@
-# manaswini — Frontend: Live Map, GPS Display & The 3 Dashboards
+# manaswini's Tasks — Frontend
 
-**Branch:** `manaswini`
-**Role:** Frontend
-**Status:** NOT STARTED
-**Depends on:** abhinaya's `screen_locations`/`screen_status_log` tables and harshitha's `franchises`/`advertisers`/`ads`/roles — check `memory/SCHEMA-REFERENCE.md` before starting each piece.
+**Your role:** Live Map + The 3 Dashboards (what the user sees and clicks)
 
-## Tasks
+## What you're building, in plain words
+This is the biggest frontend piece: a live map showing all screens, and three separate dashboards for the three types of users (main admin, franchise, advertiser).
 
-### 1. Live map on the main home page
-File: `app/(app)/overview/page.tsx` + new `overview-map.tsx` component, positioned on the left of the layout
-- Use a lightweight map library (MapLibre GL or Leaflet — avoid Google Maps to skip billing/API-key setup).
-- Static screens: plot at fixed `lat`/`lng`.
-- Bus/auto screens: plot at latest position from `screen_locations` (join, `ORDER BY recorded_at DESC LIMIT 1` per screen).
-- Point color: green if `is_online`, red/grey if offline.
-- Click a point → popover with screen name + status.
-- Live updates: poll every few seconds, or use Supabase Realtime if already set up elsewhere in the codebase.
+## Your tasks
 
-### 2. GPS reporting from the player app (the device side of the map)
-File: `app/player/[token]/page.tsx`
-- For `screen_type` = `bus`/`auto`, use the browser Geolocation API to get lat/lng and send it to the heartbeat endpoint (abhinaya's backend accepts it).
-- Static screens skip this — no permission prompt needed.
-- Handle geolocation permission denial gracefully — don't break playback if it's denied.
+**1. Live map on the home page**
+- Add a map on the left side of the main dashboard page.
+- Every screen shows up as a point: **green if online, red if offline**.
+- Static screens sit at a fixed spot. Bus/auto screens should move as their GPS location updates.
+- Clicking a point shows the screen's name and status.
 
-### 3. Role-based routing shell
-- After login, route users to the right dashboard based on role: `main_admin` → admin dashboard, `franchise_manager` → franchise dashboard, `advertiser` → advertiser dashboard.
-- Build this early — soumya and everyone else doing role-scoped UI needs a shared way to check "current user's role/franchise."
+**2. Get GPS working on the player screen itself**
+- On the actual screen device (bus/auto only), ask the browser for its location and send it up regularly, alongside the existing heartbeat ping.
+- Static screens don't need this — skip it for them.
 
-### 4. Main Admin dashboard
-- Global view: all franchises, all screens across territories, all advertisers.
-- Approval queue for franchise-submitted ads (harshitha's backend logic powers this).
-- Franchise management UI: create/edit franchises, assign a franchise_manager.
+**3. Send people to the right dashboard after login**
+- Main admin → admin dashboard
+- Franchise manager → franchise dashboard
+- Advertiser → advertiser dashboard
 
-### 5. Franchise dashboard ("the all-rounder")
-- Scoped to their own franchise/territory — screens, schedules, playlists (reuse existing UI, add franchise filter).
-- Their approval queue: advertiser ads targeting their franchise, approve/reject per-ad.
-- Ability to submit their own ads (which then need main-admin approval).
+**4. Main Admin dashboard**
+- See everything: all franchises, all screens, all advertisers.
+- A queue to approve ads that franchises submit for themselves.
+- A way to create/edit franchises and assign a manager to each.
 
-### 6. Advertiser dashboard
-- Minimal: "My Ads" (with per-franchise approval status), "Create Ad" (pick media, pick target franchises), and an analytics view (abhinaya's queries, you build the page).
-- Must never render other advertisers'/franchises' data — enforce in the UI even though RLS backs it up too.
+**5. Franchise dashboard ("the all-rounder")**
+- Only shows their own territory's screens/schedules/playlists.
+- A queue to approve/reject advertiser ads targeting their territory.
+- A way for the franchise to submit their own ad (goes to main admin for approval).
 
-## Deliverable
-A live map with correct status colors and GPS-tracked vehicle screens, plus three working role-gated dashboards wired to the approval workflow.
+**6. Advertiser dashboard**
+- Kept simple: "My Ads" (with approval status per territory), "Create Ad" (pick media + pick which territories to target), and a page showing their own ad analytics.
+- They should never see anyone else's data.
+
+## Note
+Almost everything here depends on the backend team, especially harshitha's franchises/advertisers/ads work. Check `memory/SCHEMA-REFERENCE.md` first, and don't be afraid to ask soumya or ashwanth for help — this is a lot of ground to cover alone.
+
+## Done means
+Live map works with correct colors + moving vehicle markers, and all 3 dashboards are up and connected to the real approval flow.

@@ -1,31 +1,30 @@
-# srinitha — Backend: Media, Playlist & Screensaver Logic
+# srinitha's Tasks — Backend
 
-**Branch:** `srinitha`
-**Role:** Backend
-**Status:** NOT STARTED (continuing your existing media/admin domain)
+**Your role:** Media, Playlists & Screensaver (the backend/database side)
 
-## Tasks
+## What you're building, in plain words
+A few upgrades to how media and playlists work behind the scenes, plus a couple of leftover fixes from last time.
 
-### 1. Media: orientation tagging
-- Add `orientation` column to `media_items` (`landscape`/`portrait`) if not already covered by another migration — check `memory/SCHEMA-REFERENCE.md` first, ashwanth/harshitha may have touched this table.
-- Backend logic/API to tag orientation at upload time (auto-detect from file dimensions if feasible, otherwise accept it as a field from the upload request).
+## Your tasks
 
-### 2. Media: live video via link
-- Add `source_type` (`upload`/`link`) and `external_url` column to `media_items` — migration + API support for creating a media item from a URL instead of a file upload.
-- Document clearly for whoever builds playback (player app) that both cases need to be handled.
+**1. Media orientation**
+- Add a field so each photo/video knows if it's landscape or portrait.
 
-### 3. Playlist: per-item repeat count
-- Add `repeat_count INT DEFAULT 1` to `playlist_items` — migration + API support for setting/reading it when building a playlist.
+**2. Live video links**
+- Right now people can only upload a file. Add support for pasting a **live video URL** instead — so it's stored as a link, not a file.
 
-### 4. Screensaver backend
-- New setting for fallback content when no schedule/playlist is active — likely a `screensaver_media_id` column on `orgs` (org-level, simplest to start), plus API to get/set it.
+**3. Playlist repeat count**
+- Add a field so each video in a playlist can say "play this 3 times" (per item, not the whole playlist).
 
-### 5. Read-only user invite — backend enforcement
-- Confirm the existing `viewer` role in `org_members` is actually enforced everywhere (RLS + API checks), not just a label. This is what "read only" invite maps to.
+**4. Screensaver setting**
+- Add a way to pick a default "screensaver" media item — shown when nothing else is scheduled.
 
-### 6. Carry-over from the previous backlog
-- Delete the actual Storage file when a media item is deleted (currently only removes the DB row, file stays orphaned) — fix in the delete API/logic.
-- Decide the fate of the unused media upload API route — use it or delete it.
+**5. Double-check read-only invites work properly**
+- We already have a "viewer" role. Just confirm it's actually locked down everywhere (not just hidden in the UI).
 
-## Deliverable
-Backend/schema support for media orientation + live links, playlist repeat-count, screensaver setting, and confirmed read-only enforcement — all documented in `memory/SCHEMA-REFERENCE.md` for soumya to build the UI against.
+**6. Two small leftover fixes**
+- When someone deletes a media file, actually delete it from storage too (right now it just disappears from the list, but the file stays).
+- There's an unused upload API route sitting around — decide if we keep it or delete it.
+
+## Done means
+Media supports orientation + live links, playlists support repeat counts, screensaver setting exists, and the two leftover bugs are fixed. Write new fields down in `memory/SCHEMA-REFERENCE.md`.
