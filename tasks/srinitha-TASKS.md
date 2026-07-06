@@ -1,37 +1,31 @@
-# srinitha — Media, Playlist & Admin Panel Enhancements
+# srinitha — Backend: Media, Playlist & Screensaver Logic
 
 **Branch:** `srinitha`
-**Status:** NOT STARTED (continuing your existing media/admin ownership from the previous round)
-**Depends on:** nothing blocking from ashwanth's schema for most of this — you can start immediately. Coordinate with him only if the `ads` table shape affects how media attaches to an ad.
+**Role:** Backend
+**Status:** NOT STARTED (continuing your existing media/admin domain)
 
 ## Tasks
 
-### 1. Orientation filter on media upload/library
-File: media upload + library components (wherever `app/(app)/media/` currently lives)
-- Add a portrait/landscape filter to the media grid/browser.
-- Tag each uploaded item with orientation at upload time (or auto-detect from the file's dimensions if feasible — otherwise a manual toggle at upload is fine).
+### 1. Media: orientation tagging
+- Add `orientation` column to `media_items` (`landscape`/`portrait`) if not already covered by another migration — check `memory/SCHEMA-REFERENCE.md` first, ashwanth/harshitha may have touched this table.
+- Backend logic/API to tag orientation at upload time (auto-detect from file dimensions if feasible, otherwise accept it as a field from the upload request).
 
-### 2. Support live video via link, not just file upload
-- Add an alternate upload path: "paste a live stream URL" instead of uploading a file. Store this as a `media_items` row with a `source_type` (`upload` vs `link`) and `external_url` column instead of `storage_path` — you'll need a small migration for this, or coordinate with ashwanth to bundle it into his pass.
-- Player app playback (whoever ends up building actual playback rendering) will need to handle both cases — flag this clearly in your PR description so it's not missed downstream.
+### 2. Media: live video via link
+- Add `source_type` (`upload`/`link`) and `external_url` column to `media_items` — migration + API support for creating a media item from a URL instead of a file upload.
+- Document clearly for whoever builds playback (player app) that both cases need to be handled.
 
-### 3. Playlist per-item repeat count
-File: playlist builder (`app/(app)/playlists/[id]/playlist-builder.tsx`)
-- Add a "number of times" field per playlist item (not a whole-playlist loop — confirmed per-item).
-- Store as a new column on `playlist_items`, e.g. `repeat_count INT DEFAULT 1`.
-- Update playlist_items schema via migration.
+### 3. Playlist: per-item repeat count
+- Add `repeat_count INT DEFAULT 1` to `playlist_items` — migration + API support for setting/reading it when building a playlist.
 
-### 4. Screensaver option in admin panel
-- New admin setting (org-level or per-screen — your call, org-level is simpler to start) for fallback content shown when no schedule/playlist is active.
-- Likely a new `screensaver_media_id` column on `orgs` or a dedicated settings table, plus a settings UI section.
+### 4. Screensaver backend
+- New setting for fallback content when no schedule/playlist is active — likely a `screensaver_media_id` column on `orgs` (org-level, simplest to start), plus API to get/set it.
 
-### 5. User invite with read-only access
-File: wherever team invites currently live (`app/(app)/settings/settings-form.tsx` per the existing settings work)
-- Add a "read only" option when inviting a new user — maps to the existing `viewer` role in `org_members`, just make sure it's actually enforced (check RLS/UI gating, not just cosmetic).
+### 5. Read-only user invite — backend enforcement
+- Confirm the existing `viewer` role in `org_members` is actually enforced everywhere (RLS + API checks), not just a label. This is what "read only" invite maps to.
 
-### 6. Carry-over from the previous backlog (still not done)
-- Delete the actual Storage file when a media item is deleted (currently just removes the DB row/list entry, file stays orphaned).
+### 6. Carry-over from the previous backlog
+- Delete the actual Storage file when a media item is deleted (currently only removes the DB row, file stays orphaned) — fix in the delete API/logic.
 - Decide the fate of the unused media upload API route — use it or delete it.
 
 ## Deliverable
-Orientation filtering + live-link media support, per-item playlist repeat counts, a screensaver setting, and read-only user invites.
+Backend/schema support for media orientation + live links, playlist repeat-count, screensaver setting, and confirmed read-only enforcement — all documented in `memory/SCHEMA-REFERENCE.md` for soumya to build the UI against.

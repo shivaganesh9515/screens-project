@@ -1,28 +1,36 @@
-# soumya — Screen Registration & Management UI
+# soumya — Frontend: Screen Registration, Media & Playlist UI
 
 **Branch:** `soumya`
+**Role:** Frontend
 **Status:** NOT STARTED
-**Depends on:** ashwanth's `screens` table columns (Task 1) — pull his branch/migration before starting, or coordinate column names directly if he hasn't pushed yet.
+**Depends on:** abhinaya's `screens` columns (Task 1 in her file) and srinitha's media/playlist backend changes — check `memory/SCHEMA-REFERENCE.md` before starting each piece, or coordinate directly if it's not pushed yet.
 
 ## Tasks
 
 ### 1. Rework "Add Screen" flow around the unique number
 File: `app/(app)/screens/add-screen-modal.tsx`
-- Remove/replace whatever's left of the old pairing-code-first assumption.
-- New flow: admin enters the screen's **pre-printed unique number** to register it (this is how the physical unit gets claimed — no more random on-screen code as the primary path).
-- Form fields: unique number, orientation (landscape/portrait — radio or toggle), size type, screen type (static / bus / auto), connectivity type (SIM / WiFi), location (lat/lng — for static screens; skip for bus/auto since manaswini's GPS tracking handles those live).
-- On submit, insert into `screens` with all these fields plus `franchise_id` (screen belongs to whichever franchise territory it's being registered under).
+- Replace the old pairing-code-first flow: admin enters the screen's **pre-printed unique number** to register/claim it.
+- Form fields: unique number, orientation (landscape/portrait toggle), size type, screen type (static/bus/auto), connectivity type (SIM/WiFi), location (lat/lng — static screens only, skip for bus/auto since those get GPS live from manaswini's map work).
 
-### 2. Screens list/table — surface the new metadata
+### 2. Screens list/table — show the new metadata
 File: `app/(app)/screens/screens-table.tsx`, `app/(app)/screens/page.tsx`
-- Add columns/badges for orientation, screen type (static/bus/auto icon), connectivity type.
+- Add columns/badges: orientation, screen type icon (static/bus/auto), connectivity type.
 - Filter/sort by screen type and orientation.
 
-### 3. Screen detail view
-- Wherever a single screen's details are shown, display the unique number prominently (it's the verification/audit trail), plus all the new metadata fields, editable by admin.
+### 3. Media upload UI
+- Add orientation filter to the media grid/browser (portrait/landscape).
+- Add a "paste a live stream URL" option alongside file upload (srinitha's backend adds `source_type`/`external_url` — build the toggle/form for it).
 
-### 4. Franchise-scoped screen list
-- Make sure the screens list respects `franchise_id` scoping — a franchise_manager should only see screens in their own territory (this ties into harshitha's RBAC/dashboard work — coordinate on how the franchise scoping check is implemented, e.g. a shared hook or server-side filter).
+### 4. Playlist builder UI
+File: `app/(app)/playlists/[id]/playlist-builder.tsx`
+- Add a "number of times" input per playlist item (per-item repeat count, srinitha's `repeat_count` column).
+
+### 5. Screensaver setting UI
+- Simple admin settings section: pick a media item as the screensaver/fallback content (srinitha's backend field).
+
+### 6. Read-only invite UI
+File: `app/(app)/settings/settings-form.tsx`
+- Add a "read only" option to the invite-user form (maps to existing `viewer` role).
 
 ## Deliverable
-Updated add-screen flow using unique-number verification instead of pairing codes, with all new metadata fields, and a screens list that filters/displays them.
+Updated add-screen flow with unique-number verification and new metadata fields, plus media/playlist/screensaver/invite UI updates.
