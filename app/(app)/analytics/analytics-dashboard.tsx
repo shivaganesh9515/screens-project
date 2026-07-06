@@ -156,21 +156,25 @@ export function AnalyticsDashboard({
     }));
   }, [filtered]);
 
-  // Per-screen performance
+  // Per-screen performance (grouped by screen ID, not name — prevents duplicate-name merge bug)
   const screenPerformance = useMemo(() => {
-    const map: Record<string, { plays: number; avgDuration: number; count: number }> = {};
+    const map: Record<string, { id: string; name: string; plays: number; avgDuration: number; count: number }> = {};
     for (const log of filtered) {
-      const name = log.screens?.name ?? "Unknown";
-      if (!map[name]) map[name] = { plays: 0, avgDuration: 0, count: 0 };
-      map[name].plays++;
-      map[name].avgDuration += log.duration_ms ?? 0;
-      map[name].count++;
+      const screenId = log.screen_id;
+      const screenName = log.screens?.name ?? "Unknown";
+      if (!map[screenId]) map[screenId] = { id: screenId, name: screenName, plays: 0, avgDuration: 0, count: 0 };
+      map[screenId].plays++;
+      map[screenId].avgDuration += log.duration_ms ?? 0;
+      map[screenId].count++;
+      // Keep name in sync (handles case where screen name changes between plays)
+      map[screenId].name = screenName;
     }
-    return Object.entries(map).map(([name, data]) => ({
-      name,
+    return Object.entries(map).map(([id, data]) => ({
+      id,
+      name: data.name,
       plays: data.plays,
       avgDuration: data.count > 0 ? Math.round(data.avgDuration / data.count / 1000) : 0,
-      uptime: screens.find((s) => s.name === name)?.is_online ? true : false,
+      uptime: screens.find((s) => s.id === id)?.is_online ?? false,
     }));
   }, [filtered, screens]);
 
@@ -537,7 +541,7 @@ export function AnalyticsDashboard({
                     <Bar dataKey="plays" radius={[4, 4, 0, 0]} barSize={28}>
                       {screenPerformance.map((entry) => (
                         <Cell
-                          key={entry.name}
+                          key={entry.id}
                           fill={entry.uptime ? COLORS.success : COLORS.destructive}
                           fillOpacity={entry.uptime ? 0.85 : 0.6}
                         />
