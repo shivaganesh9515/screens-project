@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Monitor, Clock, Play } from "lucide-react";
+import { Clock, Play } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusPill } from "@/components/ui/status-pill";

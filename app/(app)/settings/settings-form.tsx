@@ -10,9 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Building, User, Shield, CreditCard, Trash2, Monitor, Upload } from "lucide-react";
+import { Building, User, Shield, CreditCard, Trash2, Upload } from "lucide-react";
 
-interface OrgData { id: string; name: string; slug: string; plan: string; timezone: string; }
+interface OrgData { id: string; name: string; slug: string; plan: string; timezone: string; logo_path?: string; }
 interface MemberData { org_id: string; user_id: string; role: string; joined_at: string; }
 
 export function SettingsForm({ user, org, members, role }: { user: any; org: OrgData; members: MemberData[]; role: string }) {

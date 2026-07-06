@@ -53,6 +53,7 @@ export default async function OverviewPage() {
     { data: schedules },
     { data: playlists },
     { data: screenGroups },
+    { data: allMediaForMetrics },
   ] = await Promise.all([
     supabase.from("screens").select("*", { count: "exact", head: true }).eq("org_id", orgId),
     supabase.from("screens").select("*", { count: "exact", head: true }).eq("org_id", orgId).eq("is_online", true),
@@ -62,6 +63,7 @@ export default async function OverviewPage() {
     supabase.from("schedules").select("*, playlists(name), screens(name), screen_groups(name)").eq("org_id", orgId).order("created_at", { ascending: false }).limit(3),
     supabase.from("playlists").select("id, name").eq("org_id", orgId),
     supabase.from("screen_groups").select("id, name").eq("org_id", orgId),
+    supabase.from("media_items").select("size_bytes").eq("org_id", orgId),
   ]);
 
   const screenRows = (screens ?? []) as ScreenRow[];
@@ -78,8 +80,28 @@ export default async function OverviewPage() {
   const offlineScreens = (totalScreens ?? 0) - (onlineScreens ?? 0);
   const totalImpressions = allPlayLogs?.length ?? 0;
   const fleetUptime = totalScreens && totalScreens > 0 ? Math.round((onlineScreens / totalScreens) * 100) : 0;
-  const storageUsed = 64;
-  const contentFreshness = 87;
+
+  // Compute storage used: total size of all media vs 1GB free-tier limit
+  const STORAGE_LIMIT_BYTES = 1 * 1024 * 1024 * 1024; // 1 GB
+  const totalStorageBytes = (allMediaForMetrics ?? []).reduce(
+    (sum: number, item: { size_bytes?: number }) => sum + (typeof item.size_bytes === "number" ? item.size_bytes : 0),
+    0
+  );
+  const storageUsed = Math.min(100, Math.round((totalStorageBytes / STORAGE_LIMIT_BYTES) * 100));
+
+  // Compute content freshness: % of media items played in the last 7 days
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const recentlyPlayedMediaIds = new Set(
+    (allPlayLogs ?? [])
+      .filter((log: { started_at: string; media_item_id?: string }) => new Date(log.started_at).getTime() > sevenDaysAgo)
+      .map((log: { media_item_id?: string }) => log.media_item_id)
+      .filter(Boolean)
+  );
+  const totalMediaCount = totalMedia ?? 0;
+  const contentFreshness =
+    totalMediaCount > 0
+      ? Math.round((recentlyPlayedMediaIds.size / totalMediaCount) * 100)
+      : 100;
 
   // Derive top content for SmartInsights
   const topContent = (() => {
@@ -144,7 +166,6 @@ export default async function OverviewPage() {
             totalScreens={totalScreens ?? 0}
             onlineScreens={onlineScreens ?? 0}
             offlineScreens={offlineScreens}
-            totalImpressions={totalImpressions}
             topContentName={topContent?.name}
             topContentPlays={topContent?.plays}
           />
