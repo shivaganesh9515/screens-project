@@ -50,6 +50,7 @@ export interface MediaItem {
   size_bytes: number | null;
   folder: string | null;
   tags: string[] | null;
+  orientation: "portrait" | "landscape" | null;
   created_at: string;
 }
 
