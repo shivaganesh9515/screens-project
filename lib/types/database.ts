@@ -11,7 +11,7 @@ export interface Org {
 export interface OrgMember {
   org_id: string;
   user_id: string;
-  role: "admin" | "editor" | "viewer";
+  role: "admin" | "editor" | "viewer" | "main_admin" | "franchise_manager";
   joined_at: string;
 }
 
@@ -128,4 +128,39 @@ export interface PlayLog {
   duration_ms: number | null;
   screens?: { name: string } | null;
   media_items?: { name: string; type: string } | null;
+}
+
+export interface Franchise {
+  id: string;
+  org_id: string;
+  managed_by: string | null;
+  name: string;
+  created_at: string;
+}
+
+export interface Advertiser {
+  id: string;
+  org_id: string;
+  user_id: string | null;
+  name: string;
+  created_at: string;
+}
+
+export interface Ad {
+  id: string;
+  advertiser_id: string;
+  org_id: string;
+  name: string;
+  media_item_id: string | null;
+  status: "pending" | "approved" | "rejected";
+  created_at: string;
+}
+
+export interface AdFranchiseTarget {
+  ad_id: string;
+  franchise_id: string;
+  status: "pending" | "approved" | "rejected";
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
 }
