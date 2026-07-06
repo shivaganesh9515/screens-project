@@ -42,3 +42,8 @@ CREATE TABLE ad_franchise_targets (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   PRIMARY KEY (ad_id, franchise_id)
 );
+
+-- Extend org_members role constraint to support new roles
+ALTER TABLE org_members DROP CONSTRAINT org_members_role_check;
+ALTER TABLE org_members ADD CONSTRAINT org_members_role_check
+  CHECK (role IN ('admin', 'editor', 'viewer', 'main_admin', 'franchise_manager'));

@@ -22,7 +22,7 @@ Links users to orgs with roles. No `users` table — `auth.users` is source of t
 CREATE TABLE org_members (
   org_id UUID REFERENCES orgs(id) ON DELETE CASCADE,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  role TEXT NOT NULL DEFAULT 'editor' CHECK (role IN ('admin', 'editor', 'viewer')),
+  role TEXT NOT NULL DEFAULT 'editor' CHECK (role IN ('admin', 'editor', 'viewer', 'main_admin', 'franchise_manager')),
   joined_at TIMESTAMPTZ DEFAULT NOW(),
   PRIMARY KEY (org_id, user_id)
 );
