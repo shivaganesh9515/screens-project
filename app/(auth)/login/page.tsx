@@ -23,7 +23,7 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -32,6 +32,16 @@ export default function LoginPage() {
       setError(error.message);
       setLoading(false);
       return;
+    }
+
+    if (data?.session) {
+      await fetch("/api/auth/onboard", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${data.session.access_token}`,
+          "Content-Type": "application/json",
+        },
+      });
     }
 
     router.push("/overview");

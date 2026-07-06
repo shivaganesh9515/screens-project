@@ -12,7 +12,7 @@ import { Layers, Plus, Trash2, MonitorSmartphone } from "lucide-react";
 
 interface Group { id: string; name: string; _count?: { screens: number }; }
 
-export function ScreenGroups({ groups, orgId }: { groups: Group[]; orgId: string }) {
+export function ScreenGroups({ groups, screens, orgId }: { groups: Group[]; screens: Array<{ group_id: string | null }>; orgId: string }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -39,7 +39,13 @@ export function ScreenGroups({ groups, orgId }: { groups: Group[]; orgId: string
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-foreground">Screen Groups</h3>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger><Button size="sm" className="rounded-xl gap-1.5" type="button"><Plus className="h-4 w-4" /> New Group</Button></DialogTrigger>
+          <DialogTrigger
+            render={
+              <Button size="sm" className="rounded-xl gap-1.5" type="button">
+                <Plus className="h-4 w-4" /> New Group
+              </Button>
+            }
+          />
           <DialogContent className="rounded-2xl">
             <DialogHeader><DialogTitle>Create Screen Group</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
@@ -61,7 +67,7 @@ export function ScreenGroups({ groups, orgId }: { groups: Group[]; orgId: string
             <div key={group.id} className="flex items-center justify-between rounded-xl bg-muted/40 px-4 py-3.5 transition-colors hover:bg-muted/70">
               <div>
                 <p className="text-sm font-medium text-foreground">{group.name}</p>
-                <p className="text-xs text-muted-foreground">{group._count?.screens ?? 0} screen(s)</p>
+                <p className="text-xs text-muted-foreground">{screens.filter((s) => s.group_id === group.id).length} screen(s)</p>
               </div>
               <Button variant="ghost" size="sm" onClick={() => handleDelete(group.id)} className="h-8 w-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10" type="button"><Trash2 className="h-4 w-4" /></Button>
             </div>

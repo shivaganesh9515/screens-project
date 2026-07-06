@@ -46,31 +46,21 @@ export default function SignupPage() {
     if (authError) { setError(authError.message); setLoading(false); return; }
     if (!authData.user) { setError("Failed to create account."); setLoading(false); return; }
 
-    const slug = orgName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    const { error: orgError } = await supabase.from("orgs").insert({ name: orgName, slug });
-
-    if (orgError) {
-      if (orgError.code === "23505") {
-        setError("Organization name already exists. Please choose another organization name.");
-      } else {
-        setError("Failed to create organization. Please try again.");
+    if (authData.session) {
+      const res = await fetch("/api/auth/onboard", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${authData.session.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: orgName }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        setError(err.error || "Failed to setup organization");
+        setLoading(false);
+        return;
       }
-       setLoading(false);
-       return;
-    }
-    const { data: orgData, error: orgFetchError } = await supabase
-      .from("orgs").select("id").eq("slug", slug).single();
-    if (orgFetchError || !orgData) {
-      setError("Failed to create organization. Please try again.");
-      setLoading(false);
-      return;
-    }
-    const { error: memberError } = await supabase.from("org_members")
-      .insert({ org_id: orgData.id, user_id: authData.user.id, role: "admin" });
-    if (memberError) {
-      setError("Account created but could not join organization. Please contact support.");
-      setLoading(false);
-      return;
     }
   };
 

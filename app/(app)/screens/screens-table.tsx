@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,17 +41,21 @@ export function ScreensTable({ screens, groups, orgId }: { screens: Screen[]; gr
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "online" | "offline">("all");
   const supabase = createClient();
+  const router = useRouter();
+
+  const isScreenOnline = (s: Screen) => s.is_online && s.last_seen && Date.now() - new Date(s.last_seen).getTime() < 90_000;
 
   const filtered = screens.filter((s) => {
     const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === "all" || (statusFilter === "online" ? s.is_online : !s.is_online);
+    const online = isScreenOnline(s);
+    const matchesStatus = statusFilter === "all" || (statusFilter === "online" ? online : !online);
     return matchesSearch && matchesStatus;
   });
 
   const handleDelete = async (id: string) => {
     const { error } = await supabase.from("screens").delete().eq("id", id);
     if (error) toast.error("Failed to delete screen");
-    else toast.success("Screen deleted");
+    else { toast.success("Screen deleted"); router.refresh(); }
   };
 
   return (
@@ -113,9 +118,9 @@ export function ScreensTable({ screens, groups, orgId }: { screens: Screen[]; gr
                     </Link>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={cn("gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium", screen.is_online ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700")}>
-                      <span className={cn("h-1.5 w-1.5 rounded-full", screen.is_online ? "bg-emerald-500" : "bg-red-500")} />
-                      {screen.is_online ? "Online" : "Offline"}
+                    <Badge variant="outline" className={cn("gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium", isScreenOnline(screen) ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700")}>
+                      <span className={cn("h-1.5 w-1.5 rounded-full", isScreenOnline(screen) ? "bg-emerald-500" : "bg-red-500")} />
+                      {isScreenOnline(screen) ? "Online" : "Offline"}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{screen.screen_groups?.name ?? "—"}</TableCell>

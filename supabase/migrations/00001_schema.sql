@@ -124,7 +124,7 @@ CREATE TABLE play_logs (
 -- Helper: Create standard RLS policies for org-isolated tables
 DO $$
 DECLARE
-  tables_with_org TEXT[] := ARRAY['org_members', 'screen_groups', 'screens', 'media_items', 'playlists', 'playlist_items', 'templates', 'schedules', 'play_logs'];
+  tables_with_org TEXT[] := ARRAY['org_members', 'screen_groups', 'screens', 'media_items', 'playlists', 'playlist_items', 'templates', 'schedules'];
   tbl TEXT;
 BEGIN
   FOREACH tbl IN ARRAY tables_with_org

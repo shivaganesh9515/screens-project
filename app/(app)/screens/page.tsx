@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ScreensTable } from "./screens-table";
 import { AddScreenModal } from "./add-screen-modal";
@@ -6,7 +7,7 @@ import { ScreenGroups } from "@/components/screens/screen-groups";
 export default async function ScreensPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user) redirect("/login");
 
   const { data: member } = await supabase
     .from("org_members")
@@ -14,7 +15,9 @@ export default async function ScreensPage() {
     .eq("user_id", user.id)
     .single();
 
-  if (!member) return null;
+  if (!member) {
+    redirect("/setup");
+  }
 
   const [screensResult, groupsResult] = await Promise.all([
     supabase
@@ -49,7 +52,7 @@ export default async function ScreensPage() {
         </div>
         <div>
           <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
-            <ScreenGroups groups={groupsResult.data ?? []} orgId={member.org_id} />
+            <ScreenGroups groups={groupsResult.data ?? []} screens={screensResult.data ?? []} orgId={member.org_id} />
           </div>
         </div>
       </div>
