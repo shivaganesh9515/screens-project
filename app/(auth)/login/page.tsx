@@ -44,7 +44,24 @@ export default function LoginPage() {
       });
     }
 
-    router.push("/overview");
+    const { data: member } = await supabase
+      .from("org_members")
+      .select("role")
+      .eq("user_id", data.user.id)
+      .single();
+
+    const role = member?.role;
+    let redirectPath = "/overview";
+
+    if (role === "main_admin" || role === "admin" || role === "editor" || role === "viewer") {
+      redirectPath = "/admin";
+    } else if (role === "franchise_manager" || role === "franchise") {
+      redirectPath = "/franchise";
+    } else if (role === "advertiser") {
+      redirectPath = "/advertiser";
+    }
+
+    router.push(redirectPath);
     router.refresh();
   };
 
