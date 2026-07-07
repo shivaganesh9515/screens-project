@@ -124,11 +124,11 @@ export let mockData = {
     { id: "group-3", org_id: "org-1", name: "Cafeteria", created_at: "2025-01-01T00:00:00Z" },
   ],
   screens: [
-    { id: "screen-1", org_id: "org-1", group_id: "group-1", anon_user_id: null, name: "Main Lobby Display", pairing_code: null, pairing_expires_at: null, paired_at: "2025-01-15T08:00:00Z", last_seen: new Date(Date.now() - 60000).toISOString(), is_online: true, resolution: "1920x1080", tags: ["lobby", "main"], created_at: "2025-01-10T00:00:00Z", screen_groups: { name: "Lobby" } },
-    { id: "screen-2", org_id: "org-1", group_id: "group-1", anon_user_id: null, name: "Second Floor Lobby", pairing_code: null, pairing_expires_at: null, paired_at: "2025-01-20T10:00:00Z", last_seen: new Date(Date.now() - 120000).toISOString(), is_online: true, resolution: "3840x2160", tags: ["lobby", "4k"], created_at: "2025-01-18T00:00:00Z", screen_groups: { name: "Lobby" } },
-    { id: "screen-3", org_id: "org-1", group_id: "group-2", anon_user_id: null, name: "Board Room", pairing_code: null, pairing_expires_at: null, paired_at: "2025-02-01T09:00:00Z", last_seen: new Date(Date.now() - 3600000).toISOString(), is_online: true, resolution: "1920x1080", tags: ["conference"], created_at: "2025-01-25T00:00:00Z", screen_groups: { name: "Conference Rooms" } },
-    { id: "screen-4", org_id: "org-1", group_id: null, anon_user_id: null, name: "Warehouse Display", pairing_code: null, pairing_expires_at: null, paired_at: "2025-02-10T14:00:00Z", last_seen: new Date(Date.now() - 86400000).toISOString(), is_online: false, resolution: "1920x1080", tags: ["warehouse"], created_at: "2025-02-05T00:00:00Z", screen_groups: null },
-    { id: "screen-5", org_id: "org-1", group_id: "group-3", anon_user_id: null, name: "Cafeteria Menu Board", pairing_code: null, pairing_expires_at: null, paired_at: "2025-02-15T11:00:00Z", last_seen: new Date(Date.now() - 1800000).toISOString(), is_online: true, resolution: "1920x1080", tags: ["cafeteria", "menu"], created_at: "2025-02-12T00:00:00Z", screen_groups: { name: "Cafeteria" } },
+    { id: "screen-1", org_id: "org-1", group_id: "group-1", anon_user_id: null, name: "Main Lobby Display", pairing_code: null, pairing_expires_at: null, paired_at: "2025-01-15T08:00:00Z", last_seen: new Date(Date.now() - 60000).toISOString(), is_online: true, resolution: "1920x1080", tags: ["lobby", "main"], created_at: "2025-01-10T00:00:00Z", screen_groups: { name: "Lobby" }, orientation: "landscape", size_type: "55in", screen_type: "static", unique_number: "SCR-001", connectivity_type: "wifi", lat: 17.3850, lng: 78.4867, franchise_id: "franchise-1" },
+    { id: "screen-2", org_id: "org-1", group_id: "group-1", anon_user_id: null, name: "Second Floor Lobby", pairing_code: null, pairing_expires_at: null, paired_at: "2025-01-20T10:00:00Z", last_seen: new Date(Date.now() - 120000).toISOString(), is_online: true, resolution: "3840x2160", tags: ["lobby", "4k"], created_at: "2025-01-18T00:00:00Z", screen_groups: { name: "Lobby" }, orientation: "landscape", size_type: "43in", screen_type: "static", unique_number: "SCR-002", connectivity_type: "wifi", lat: 17.3860, lng: 78.4870, franchise_id: "franchise-1" },
+    { id: "screen-3", org_id: "org-1", group_id: "group-2", anon_user_id: null, name: "Board Room", pairing_code: null, pairing_expires_at: null, paired_at: "2025-02-01T09:00:00Z", last_seen: new Date(Date.now() - 3600000).toISOString(), is_online: true, resolution: "1920x1080", tags: ["conference"], created_at: "2025-01-25T00:00:00Z", screen_groups: { name: "Conference Rooms" }, orientation: "landscape", size_type: "65in", screen_type: "static", unique_number: "SCR-003", connectivity_type: "wifi", lat: 17.3870, lng: 78.4880, franchise_id: "franchise-1" },
+    { id: "screen-4", org_id: "org-1", group_id: null, anon_user_id: null, name: "Warehouse Display", pairing_code: null, pairing_expires_at: null, paired_at: "2025-02-10T14:00:00Z", last_seen: new Date(Date.now() - 86400000).toISOString(), is_online: false, resolution: "1920x1080", tags: ["warehouse"], created_at: "2025-02-05T00:00:00Z", screen_groups: null, orientation: "landscape", size_type: "32in", screen_type: "static", unique_number: "SCR-004", connectivity_type: "wifi", lat: 17.3880, lng: 78.4890, franchise_id: null },
+    { id: "screen-5", org_id: "org-1", group_id: "group-3", anon_user_id: null, name: "Cafeteria Menu Board", pairing_code: null, pairing_expires_at: null, paired_at: "2025-02-15T11:00:00Z", last_seen: new Date(Date.now() - 1800000).toISOString(), is_online: true, resolution: "1920x1080", tags: ["cafeteria", "menu"], created_at: "2025-02-12T00:00:00Z", screen_groups: { name: "Cafeteria" }, orientation: "portrait", size_type: "43in", screen_type: "static", unique_number: "SCR-005", connectivity_type: "wifi", lat: 17.3890, lng: 78.4900, franchise_id: "franchise-2" },
   ],
   media_items: [
     { id: "media-1", org_id: "org-1", name: "Welcome Banner.jpg", type: "image", storage_path: "org-1/welcome.jpg", thumbnail_path: null, duration_ms: 5000, size_bytes: 245000, folder: "Marketing", tags: ["welcome", "brand"], created_at: "2025-01-05T00:00:00Z" },
@@ -162,6 +162,24 @@ export let mockData = {
     { id: "sched-1", org_id: "org-1", screen_id: "screen-1", group_id: null, playlist_id: "pl-1", template_id: null, is_default: true, priority: 0, start_at: null, end_at: null, recurrence: null, created_at: "2025-01-10T00:00:00Z", screens: { name: "Main Lobby Display" }, screen_groups: null, playlists: { name: "Morning Loop" }, templates: null },
     { id: "sched-2", org_id: "org-1", screen_id: "screen-3", group_id: null, playlist_id: "pl-2", template_id: null, is_default: true, priority: 0, start_at: null, end_at: null, recurrence: null, created_at: "2025-01-15T00:00:00Z", screens: { name: "Board Room" }, screen_groups: null, playlists: { name: "Product Showcase" }, templates: null },
     { id: "sched-3", org_id: "org-1", screen_id: "screen-5", group_id: null, playlist_id: "pl-3", template_id: null, is_default: true, priority: 0, start_at: null, end_at: null, recurrence: null, created_at: "2025-02-01T00:00:00Z", screens: { name: "Cafeteria Menu Board" }, screen_groups: null, playlists: { name: "Cafeteria Feed" }, templates: null },
+  ],
+  franchises: [
+    { id: "franchise-1", org_id: "org-1", name: "Hyderabad Region", territory_area: "Hyderabad and surrounding areas", manager_user_id: "user-2", created_at: "2026-07-01T00:00:00Z" },
+    { id: "franchise-2", org_id: "org-1", name: "Chennai Region", territory_area: "Chennai metro", manager_user_id: "user-2", created_at: "2026-07-01T00:00:00Z" },
+  ],
+  advertisers: [
+    { id: "adv-1", user_id: "user-1", company_name: "ACME Ads", created_at: "2026-07-01T00:00:00Z" },
+  ],
+  ads: [
+    { id: "ad-1", advertiser_id: "adv-1", media_item_id: "media-1", playlist_item_id: null, status: "approved", submitted_by_franchise_id: null, created_at: "2026-07-01T00:00:00Z" },
+  ],
+  ad_franchise_targets: [
+    { id: "aft-1", ad_id: "ad-1", franchise_id: "franchise-1", status: "approved" },
+    { id: "aft-2", ad_id: "ad-1", franchise_id: "franchise-2", status: "pending" },
+  ],
+  screen_locations: [
+    { id: "sl-1", screen_id: "screen-1", lat: 17.3850, lng: 78.4867, recorded_at: "2026-07-07T10:00:00Z" },
+    { id: "sl-2", screen_id: "screen-2", lat: 17.3860, lng: 78.4870, recorded_at: "2026-07-07T10:05:00Z" },
   ],
   play_logs: autoLogs,
 };

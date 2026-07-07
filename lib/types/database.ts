@@ -11,7 +11,7 @@ export interface Org {
 export interface OrgMember {
   org_id: string;
   user_id: string;
-  role: "admin" | "editor" | "viewer";
+  role: "admin" | "editor" | "viewer" | "main_admin" | "franchise_manager";
   joined_at: string;
 }
 
@@ -35,6 +35,14 @@ export interface Screen {
   is_online: boolean;
   resolution: string | null;
   tags: string[] | null;
+  orientation: string | null;
+  size_type: string | null;
+  screen_type: string | null;
+  unique_number: string | null;
+  connectivity_type: string | null;
+  lat: number | null;
+  lng: number | null;
+  franchise_id: string | null;
   created_at: string;
   screen_groups?: { name: string } | null;
 }
@@ -126,6 +134,48 @@ export interface PlayLog {
   started_at: string;
   ended_at: string | null;
   duration_ms: number | null;
+  ad_id: string | null;
   screens?: { name: string } | null;
   media_items?: { name: string; type: string } | null;
+}
+
+export interface Franchise {
+  id: string;
+  org_id: string;
+  name: string;
+  territory_area: string | null;
+  manager_user_id: string | null;
+  created_at: string;
+}
+
+export interface Advertiser {
+  id: string;
+  user_id: string;
+  company_name: string;
+  created_at: string;
+}
+
+export interface Ad {
+  id: string;
+  advertiser_id: string | null;
+  media_item_id: string | null;
+  playlist_item_id: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  submitted_by_franchise_id: string | null;
+  created_at: string;
+}
+
+export interface AdFranchiseTarget {
+  id: string;
+  ad_id: string;
+  franchise_id: string;
+  status: 'pending' | 'approved' | 'rejected';
+}
+
+export interface ScreenLocation {
+  id: string;
+  screen_id: string;
+  lat: number;
+  lng: number;
+  recorded_at: string;
 }
