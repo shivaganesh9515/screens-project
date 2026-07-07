@@ -39,7 +39,7 @@ export default async function ScreensPage() {
           <h2 className="text-2xl font-semibold tracking-tight">Screens</h2>
           <p className="text-sm text-muted-foreground">Manage your screen devices</p>
         </div>
-        <AddScreenModal groups={groupsResult.data ?? []} />
+        <AddScreenModal groups={groupsResult.data ?? []} orgId={member.org_id} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
