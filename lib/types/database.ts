@@ -28,6 +28,13 @@ export interface Screen {
   group_id: string | null;
   anon_user_id: string | null;
   name: string;
+  unique_number: string | null;
+  orientation: string | null;
+  size_type: string | null;
+  screen_type: string | null;
+  connectivity_type: string | null;
+  lat: number | null;
+  lng: number | null;
   pairing_code: string | null;
   pairing_expires_at: string | null;
   paired_at: string | null;

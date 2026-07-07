@@ -1,7 +1,7 @@
 # soumya — Task Status Report
 
 **Branch:** `soumya`
-**Last Updated:** July 7, 2026 — 4:00 IST
+**Last Updated:** July 7, 2026 — 4:45 IST
 
 ---
 
@@ -9,37 +9,40 @@
 
 | # | Task | Status | Files Changed |
 |---|------|--------|---------------|
-| 1 | Rework "Add Screen" flow — unique number | ✅ **COMPLETED** (July 7, 4:45 ) | `app/(app)/screens/add-screen-modal.tsx`, `app/(app)/screens/page.tsx` |
-| 2 | Screens table — surface new metadata | ✅ **COMPLETED** (July 7, 4:00 ) | `app/(app)/screens/screens-table.tsx`, `lib/supabase/mock-data.ts` |
-| 3 | Screen detail view — unique number + metadata | 🟢 **READY TO BUILD** — ashwanth's columns available | `app/(app)/screens/[id]/screen-detail.tsx` |
+| 1 | Rework "Add Screen" flow — unique number | ✅ **COMPLETED** (July 7, 4:45 IST) | `app/(app)/screens/add-screen-modal.tsx`, `app/(app)/screens/page.tsx` |
+| 2 | Screens table — surface new metadata | ✅ **COMPLETED** (July 7, 4:00 IST) | `app/(app)/screens/screens-table.tsx`, `lib/supabase/mock-data.ts` |
+| 3 | Screen detail view — unique number + metadata | ✅ **COMPLETED** (July 7, 3:45 IST) | `app/(app)/screens/[id]/screen-detail.tsx`, `lib/types/database.ts` |
 | 4 | Franchise-scoped screen list | ⏳ **WAITING** — `franchise_id` column deferred to Phase 2 | `app/(app)/screens/page.tsx` |
 
 ---
 
 ## Detailed Breakdown
 
-### ✅ Task 1 — COMPLETED (July 7, 3:45 IST)
+### ✅ Task 1 — COMPLETED (July 7, 4:45 IST)
+
+**Requirements checklist:**
+
+| # | Requirement | Status |
+|---|-------------|--------|
+| 1 | Remove old pairing-code-first flow | ✅ Done |
+| 2 | Admin enters pre-printed unique number to register | ✅ Done |
+| 3 | Orientation toggle (landscape / portrait) | ✅ Done |
+| 4 | Size type select (32in / 43in / 55in / 65in / 75in / 86in) | ✅ Done |
+| 5 | Screen type — static / bus / auto | ✅ Done |
+| 6 | Connectivity type — SIM (4G/5G) / WiFi | ✅ Done |
+| 7 | Location (lat/lng) — shown only for static screens; skipped for bus/auto (manaswini's GPS handles live tracking) | ✅ Done |
+| 8 | **Franchise selection dropdown + `franchise_id` in insert** | ❌ **Missing** — no `franchises` table or `franchise_id` column in migration yet; deferred to Phase 2 |
 
 **What was built:**
 - Rewrote `add-screen-modal.tsx` to replace old pairing-code flow with **unique number registration**
-- Form fields implemented:
-  - **Unique number** — auto-uppercased, required field with validation
-  - **Screen Name** — optional, defaults to "Screen {unique_number}" if blank
-  - **Orientation** — ToggleGroup (Landscape / Portrait)
-  - **Screen Size** — Select dropdown (32in / 43in / 55in / 65in / 75in / 86in)
-  - **Screen Type** — Custom button group (Static / Bus / Auto) with icons
-  - **Connectivity** — ToggleGroup (WiFi / SIM 4G/5G)
-  - **Location** — lat/lng inputs, shown only when Screen Type = "Static"
-  - **Group** — Select (optional)
-- On submit: inserts into `screens` table with all fields + `org_id`
-- Success state: green card showing registered unique number
+- Form fields implemented: unique number (auto-uppercase, required), screen name (optional), orientation toggle, size select, screen type buttons, connectivity toggle, conditional lat/lng inputs, group select
+- On submit: inserts into `screens` table with `org_id` + all metadata fields
+- Success state: green confirmation card showing registered unique number
 - Duplicate unique number detection with user-friendly error message
 - Updated `screens/page.tsx` to pass `orgId` to the modal
-- **Franchise selection skipped** (deferred to Phase 2 — `franchise_id` not in migration yet)
-- TypeScript: ✅ zero errors
-- Code review: ✅ issues addressed (removed dead code)
+- TypeScript: ✅ zero errors | Code review: ✅ issues addressed
 
-**Note:** Need to merge ashwanth's branch to get the migration before this works against real Supabase.
+**Note:** `franchise_id` insert + franchise picker UI still pending — requires `franchises` table and `screens.franchise_id` column in the schema first.
 
 ---
 
@@ -59,12 +62,23 @@
 
 ---
 
-### 🟢 Task 3 — READY TO BUILD
+### ✅ Task 3 — COMPLETED (July 7, 5:32 IST)
 
-**What's needed:**
-- Update `screen-detail.tsx` to show unique number prominently (highlighted card, monospace)
-- Display all new metadata fields (orientation, screen type, connectivity, location, size)
-- All fields editable by admin via toggle groups and selects
+**What was built:**
+- Rewrote `screen-detail.tsx` with all new metadata fields
+- **Unique number** — prominently displayed in a highlighted gradient card with monospace font, verification label, and one-click copy button
+- **Hardware & Connectivity section** (all editable):
+  - **Orientation** — ToggleGroup (Landscape / Portrait)
+  - **Screen Size** — Select dropdown (32in / 43in / 55in / 65in / 75in / 86in)
+  - **Screen Type** — button group (Static / Bus / Auto) with icons
+  - **Connectivity** — ToggleGroup (WiFi / SIM 4G/5G)
+- **Location section** — lat/lng inputs for static screens; auto-tracked message for bus/auto
+- **Info section** — Group (editable), Resolution, Paired At, Last Seen (read-only)
+- **Tags** — editable comma-separated input
+- Edit/Cancel state management restores original values on cancel
+- Updated `lib/types/database.ts` — added `unique_number`, `orientation`, `size_type`, `screen_type`, `connectivity_type`, `lat`, `lng` to the `Screen` interface
+- TypeScript: ✅ zero errors
+- Code review: ✅ no issues found
 
 **Unblocked!** Ashwanth's migration provides all needed columns (except `franchise_id`).
 
@@ -81,16 +95,6 @@
 - harshitha's shared RBAC hook would be cleaner but not strictly required
 
 ---
-
-## Timeline Summary
-
-| Time | Event |
-|------|-------|
-| ~2:00 IST | Initial attempt — reverted (asked to wait for ashwanth) |
-| ~2:30 IST | Status report created — all tasks analyzed for dependencies |
-| ~4:00 IST | **Task 2 completed** — screens table with metadata columns |
-| ~3:15 IST | Checked ashwanth's branch — he pushed migration with matching columns ✅ |
-| ~3:45 IST | **Task 1 completed** — Add Screen modal with unique number flow |
 
 ## Git Status
 
