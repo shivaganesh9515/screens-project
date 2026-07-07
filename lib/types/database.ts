@@ -11,7 +11,7 @@ export interface Org {
 export interface OrgMember {
   org_id: string;
   user_id: string;
-  role: "admin" | "editor" | "viewer" | "main_admin" | "franchise_manager";
+  role: "admin" | "editor" | "viewer" | "main_admin" | "franchise_manager" | "franchise" | "advertiser";
   joined_at: string;
 }
 

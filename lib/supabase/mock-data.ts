@@ -117,6 +117,8 @@ export let mockData = {
   org_members: [
     { org_id: "org-1", user_id: "user-1", role: "admin", joined_at: "2025-01-01T00:00:00Z", orgs: { id: "org-1", name: "My Company", slug: "my-company", plan: "free", timezone: "UTC", logo_path: null, created_at: "2025-01-01T00:00:00Z" } },
     { org_id: "org-1", user_id: "user-2", role: "editor", joined_at: "2025-01-02T00:00:00Z", orgs: { id: "org-1", name: "My Company", slug: "my-company", plan: "free", timezone: "UTC", logo_path: null, created_at: "2025-01-01T00:00:00Z" } },
+    { org_id: "org-1", user_id: "user-3", role: "franchise", joined_at: "2025-02-01T00:00:00Z", orgs: { id: "org-1", name: "My Company", slug: "my-company", plan: "free", timezone: "UTC", logo_path: null, created_at: "2025-01-01T00:00:00Z" } },
+    { org_id: "org-1", user_id: "user-4", role: "advertiser", joined_at: "2025-02-15T00:00:00Z", orgs: { id: "org-1", name: "My Company", slug: "my-company", plan: "free", timezone: "UTC", logo_path: null, created_at: "2025-01-01T00:00:00Z" } },
   ],
   screen_groups: [
     { id: "group-1", org_id: "org-1", name: "Lobby", created_at: "2025-01-01T00:00:00Z" },
