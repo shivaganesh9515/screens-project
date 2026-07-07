@@ -219,12 +219,14 @@ export function SettingsForm({ user, org, members, role, mediaItems }: { user: a
           {isAdmin && (
             <div className="flex gap-2">
               <Dialog open={screensaverOpen} onOpenChange={setScreensaverOpen}>
-                <DialogTrigger>
+                <DialogTrigger
+                render= {
                   <Button variant="outline" className="rounded-xl gap-2" type="button">
                     <Search className="h-4 w-4" />
                     {screensaverMediaId ? "Change" : "Select Media"}
                   </Button>
-                </DialogTrigger>
+                }
+                />
                 <DialogContent className="sm:max-w-lg rounded-2xl">
                   <DialogHeader><DialogTitle>Select Screensaver Media</DialogTitle></DialogHeader>
                   <div className="space-y-3">
