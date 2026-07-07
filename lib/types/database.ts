@@ -5,6 +5,7 @@ export interface Org {
   plan: string;
   timezone: string;
   logo_path: string | null;
+  screensaver_media_id: string | null;
   created_at: string;
 }
 

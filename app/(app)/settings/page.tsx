@@ -20,6 +20,12 @@ export default async function SettingsPage() {
     .select("org_id, user_id, role, joined_at")
     .eq("org_id", member.org_id);
 
+  const { data: mediaItems } = await supabase
+    .from("media_items")
+    .select("id, name, type, thumbnail_path")
+    .eq("org_id", member.org_id)
+    .order("created_at", { ascending: false });
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
@@ -31,6 +37,7 @@ export default async function SettingsPage() {
         org={member.orgs as any}
         members={members ?? []}
         role={member.role}
+        mediaItems={mediaItems ?? []}
       />
     </div>
   );
