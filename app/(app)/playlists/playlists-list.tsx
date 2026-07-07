@@ -49,13 +49,12 @@ export function PlaylistsList({ playlists, orgId }: { playlists: Playlist[]; org
             render={
               <Button
                   className="rounded-xl gap-2 h-10 shadow-sm"
-                  type="button"
-              />
+                  type="button">
+                      <Plus className="h-4 w-4" />
+                      Create Playlist
+                </Button>
             }
-          >
-              <Plus className="h-4 w-4" />
-              Create Playlist
-          </DialogTrigger>
+          />
           <DialogContent className="sm:max-w-md rounded-2xl"><DialogHeader><DialogTitle>Create Playlist</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2"><Label>Playlist Name</Label><Input placeholder="Morning Loop" value={name} onChange={(e) => setName(e.target.value)} required className="h-11 rounded-xl" /></div>
