@@ -5,6 +5,7 @@ export interface Org {
   plan: string;
   timezone: string;
   logo_path: string | null;
+  screensaver_media_id: string | null;
   created_at: string;
 }
 
@@ -52,12 +53,15 @@ export interface MediaItem {
   org_id: string;
   name: string;
   type: "image" | "video";
-  storage_path: string;
+  storage_path: string | null;
   thumbnail_path: string | null;
   duration_ms: number | null;
   size_bytes: number | null;
   folder: string | null;
   tags: string[] | null;
+  orientation: "portrait" | "landscape" | null;
+  source_type: "upload" | "link";
+  external_url: string | null;
   created_at: string;
 }
 
@@ -76,6 +80,7 @@ export interface PlaylistItem {
   media_item_id: string;
   position: number;
   duration_ms: number;
+  repeat_count: number; 
   created_at: string;
 }
 

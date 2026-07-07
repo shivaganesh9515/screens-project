@@ -56,7 +56,7 @@ export function RecentActivity({ playLogs }: RecentActivityProps) {
                   <p className="text-xs text-muted-foreground/70">{item.screen}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-muted-foreground" suppressHydrationWarning>
                     {formatRelativeTime(item.timestamp)}
                   </span>
                   <StatusPill status="playing" size="sm" />

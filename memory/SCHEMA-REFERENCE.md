@@ -17,6 +17,7 @@ CREATE TABLE orgs (
   plan TEXT DEFAULT 'free',
   timezone TEXT DEFAULT 'UTC',
   logo_path TEXT,
+  screensaver_media_id UUID REFERENCES media_items(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```

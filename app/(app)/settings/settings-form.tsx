@@ -10,12 +10,14 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Building, User, Shield, CreditCard, Trash2, Upload } from "lucide-react";
+import { Building, User, Shield, CreditCard, Trash2, Upload, Search, Image as ImageIcon, Video, Monitor } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
-interface OrgData { id: string; name: string; slug: string; plan: string; timezone: string; logo_path?: string; }
+interface OrgData { id: string; name: string; slug: string; plan: string; timezone: string; logo_path?: string; screensaver_media_id?: string | null; }
 interface MemberData { org_id: string; user_id: string; role: string; joined_at: string; }
+interface MediaItemSummary { id: string; name: string; type: string; thumbnail_path: string | null; }
 
-export function SettingsForm({ user, org, members, role }: { user: any; org: OrgData; members: MemberData[]; role: string }) {
+export function SettingsForm({ user, org, members, role, mediaItems }: { user: any; org: OrgData; members: MemberData[]; role: string; mediaItems: MediaItemSummary[] }) {
   const [orgName, setOrgName] = useState(org.name);
   const [timezone, setTimezone] = useState(org.timezone);
   const [savingOrg, setSavingOrg] = useState(false);
@@ -26,6 +28,10 @@ export function SettingsForm({ user, org, members, role }: { user: any; org: Org
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [screensaverMediaId, setScreensaverMediaId] = useState<string | null>(org.screensaver_media_id ?? null);
+  const [savingScreensaver, setSavingScreensaver] = useState(false);
+  const [screensaverOpen, setScreensaverOpen] = useState(false);
+  const [screensaverSearch, setScreensaverSearch] = useState("");
   const router = useRouter();
   const supabase = createClient();
   const isAdmin = role === "admin";
@@ -105,6 +111,27 @@ export function SettingsForm({ user, org, members, role }: { user: any; org: Org
     setUploadingLogo(false);
   };
 
+  const handleSaveScreensaver = async () => {
+    setSavingScreensaver(true);
+    const { error } = await supabase
+      .from("orgs")
+      .update({ screensaver_media_id: screensaverMediaId })
+      .eq("id", org.id);
+    if (error) toast.error("Failed to save screensaver");
+    else { toast.success("Screensaver updated"); router.refresh(); }
+    setSavingScreensaver(false);
+  };
+
+  const handleClearScreensaver = async () => {
+    setScreensaverMediaId(null);
+    const { error } = await supabase
+      .from("orgs")
+      .update({ screensaver_media_id: null })
+      .eq("id", org.id);
+    if (error) toast.error("Failed to clear screensaver");
+    else { toast.success("Screensaver cleared"); router.refresh(); }
+  };
+
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
@@ -160,6 +187,91 @@ export function SettingsForm({ user, org, members, role }: { user: any; org: Org
             </div>
           )}
           {isAdmin && <Button onClick={handleSaveOrg} disabled={savingOrg} className="rounded-full h-10">{savingOrg ? "Saving..." : "Save Changes"}</Button>}
+        </div>
+      )
+    },
+    {
+      title: "Screensaver", icon: Monitor,
+      content: (
+        <div className="space-y-4">
+          {screensaverMediaId ? (
+            <div className="rounded-xl bg-muted/30 px-4 py-3 flex items-center gap-3">
+              {(() => {
+                const media = mediaItems.find((m) => m.id === screensaverMediaId);
+                return media ? (
+                  <>
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-primary/5">
+                      {media.type === "video" ? <Video className="h-5 w-5 text-primary" /> : <ImageIcon className="h-5 w-5 text-primary" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">{media.name}</p>
+                      <p className="text-xs text-muted-foreground capitalize">{media.type}</p>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Selected media not found</p>
+                );
+              })()}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No screensaver selected. Content will be empty when no schedule is active.</p>
+          )}
+          {isAdmin && (
+            <div className="flex gap-2">
+              <Dialog open={screensaverOpen} onOpenChange={setScreensaverOpen}>
+                <DialogTrigger>
+                  <Button variant="outline" className="rounded-xl gap-2" type="button">
+                    <Search className="h-4 w-4" />
+                    {screensaverMediaId ? "Change" : "Select Media"}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-lg rounded-2xl">
+                  <DialogHeader><DialogTitle>Select Screensaver Media</DialogTitle></DialogHeader>
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Search media..."
+                        value={screensaverSearch}
+                        onChange={(e) => setScreensaverSearch(e.target.value)}
+                        className="h-10 rounded-xl pl-10"
+                      />
+                    </div>
+                    <div className="max-h-60 overflow-y-auto space-y-2">
+                      {mediaItems
+                        .filter((m) => m.name.toLowerCase().includes(screensaverSearch.toLowerCase()))
+                        .map((media) => (
+                          <div
+                            key={media.id}
+                            onClick={() => { setScreensaverMediaId(media.id); setScreensaverOpen(false); }}
+                            className="flex cursor-pointer items-center gap-3 rounded-xl border border-border px-4 py-3 transition-all hover:bg-muted/50 hover:border-primary/30 active:scale-[0.99]"
+                          >
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-primary/5">
+                              {media.type === "video" ? <Video className="h-5 w-5 text-primary" /> : <ImageIcon className="h-5 w-5 text-primary" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="truncate text-sm font-medium">{media.name}</p>
+                              <p className="text-xs text-muted-foreground capitalize">{media.type}</p>
+                            </div>
+                          </div>
+                        ))}
+                      {mediaItems.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-8">No media found. Upload media first.</p>
+                      )}
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+              {screensaverMediaId && (
+                <Button variant="ghost" onClick={handleClearScreensaver} className="rounded-xl text-muted-foreground hover:text-destructive">
+                  Clear
+                </Button>
+              )}
+              <Button onClick={handleSaveScreensaver} disabled={savingScreensaver} className="rounded-full h-10">
+                {savingScreensaver ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          )}
         </div>
       )
     },

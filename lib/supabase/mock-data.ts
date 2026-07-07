@@ -112,13 +112,13 @@ const autoLogs = generatePlayLogs();
 
 export let mockData = {
   orgs: [
-    { id: "org-1", name: "My Company", slug: "my-company", plan: "free", timezone: "UTC", logo_path: null, created_at: "2025-01-01T00:00:00Z" },
+    { id: "org-1", name: "My Company", slug: "my-company", plan: "free", timezone: "UTC", logo_path: null, screensaver_media_id: null, created_at: "2025-01-01T00:00:00Z" },
   ],
   org_members: [
-    { org_id: "org-1", user_id: "user-1", role: "admin", joined_at: "2025-01-01T00:00:00Z", orgs: { id: "org-1", name: "My Company", slug: "my-company", plan: "free", timezone: "UTC", logo_path: null, created_at: "2025-01-01T00:00:00Z" } },
-    { org_id: "org-1", user_id: "user-2", role: "editor", joined_at: "2025-01-02T00:00:00Z", orgs: { id: "org-1", name: "My Company", slug: "my-company", plan: "free", timezone: "UTC", logo_path: null, created_at: "2025-01-01T00:00:00Z" } },
-    { org_id: "org-1", user_id: "user-3", role: "franchise", joined_at: "2025-02-01T00:00:00Z", orgs: { id: "org-1", name: "My Company", slug: "my-company", plan: "free", timezone: "UTC", logo_path: null, created_at: "2025-01-01T00:00:00Z" } },
-    { org_id: "org-1", user_id: "user-4", role: "advertiser", joined_at: "2025-02-15T00:00:00Z", orgs: { id: "org-1", name: "My Company", slug: "my-company", plan: "free", timezone: "UTC", logo_path: null, created_at: "2025-01-01T00:00:00Z" } },
+    { org_id: "org-1", user_id: "user-1", role: "admin", joined_at: "2025-01-01T00:00:00Z", orgs: { id: "org-1", name: "My Company", slug: "my-company", plan: "free", timezone: "UTC", logo_path: null, screensaver_media_id: null, created_at: "2025-01-01T00:00:00Z" } },
+    { org_id: "org-1", user_id: "user-2", role: "editor", joined_at: "2025-01-02T00:00:00Z", orgs: { id: "org-1", name: "My Company", slug: "my-company", plan: "free", timezone: "UTC", logo_path: null, screensaver_media_id: null, created_at: "2025-01-01T00:00:00Z" } },
+    { org_id: "org-1", user_id: "user-3", role: "franchise", joined_at: "2025-02-01T00:00:00Z", orgs: { id: "org-1", name: "My Company", slug: "my-company", plan: "free", timezone: "UTC", logo_path: null, screensaver_media_id: null, created_at: "2025-01-01T00:00:00Z" } },
+    { org_id: "org-1", user_id: "user-4", role: "advertiser", joined_at: "2025-02-15T00:00:00Z", orgs: { id: "org-1", name: "My Company", slug: "my-company", plan: "free", timezone: "UTC", logo_path: null, screensaver_media_id: null, created_at: "2025-01-01T00:00:00Z" } },
   ],
   screen_groups: [
     { id: "group-1", org_id: "org-1", name: "Lobby", created_at: "2025-01-01T00:00:00Z" },
@@ -133,14 +133,15 @@ export let mockData = {
     { id: "screen-5", org_id: "org-1", group_id: "group-3", anon_user_id: null, name: "Cafeteria Menu Board", pairing_code: null, pairing_expires_at: null, paired_at: "2025-02-15T11:00:00Z", last_seen: new Date(Date.now() - 1800000).toISOString(), is_online: true, resolution: "1920x1080", tags: ["cafeteria", "menu"], created_at: "2025-02-12T00:00:00Z", screen_groups: { name: "Cafeteria" }, orientation: "portrait", size_type: "43in", screen_type: "static", unique_number: "SCR-005", connectivity_type: "wifi", lat: 17.3890, lng: 78.4900, franchise_id: "franchise-2" },
   ],
   media_items: [
-    { id: "media-1", org_id: "org-1", name: "Welcome Banner.jpg", type: "image", storage_path: "org-1/welcome.jpg", thumbnail_path: null, duration_ms: 5000, size_bytes: 245000, folder: "Marketing", tags: ["welcome", "brand"], created_at: "2025-01-05T00:00:00Z" },
-    { id: "media-2", org_id: "org-1", name: "Product Launch.mp4", type: "video", storage_path: "org-1/launch.mp4", thumbnail_path: null, duration_ms: 30000, size_bytes: 15000000, folder: "Marketing", tags: ["product"], created_at: "2025-01-10T00:00:00Z" },
-    { id: "media-3", org_id: "org-1", name: "Company Overview.mp4", type: "video", storage_path: "org-1/overview.mp4", thumbnail_path: null, duration_ms: 60000, size_bytes: 25000000, folder: "Corporate", tags: ["about"], created_at: "2025-01-15T00:00:00Z" },
-    { id: "media-4", org_id: "org-1", name: "Special Offer.jpg", type: "image", storage_path: "org-1/offer.jpg", thumbnail_path: null, duration_ms: 8000, size_bytes: 180000, folder: "Marketing", tags: ["promo"], created_at: "2025-02-01T00:00:00Z" },
-    { id: "media-5", org_id: "org-1", name: "Weather Widget.png", type: "image", storage_path: "org-1/weather.png", thumbnail_path: null, duration_ms: 10000, size_bytes: 95000, folder: "Widgets", tags: ["utility"], created_at: "2025-02-05T00:00:00Z" },
-    { id: "media-6", org_id: "org-1", name: "Social Media Feed.mp4", type: "video", storage_path: "org-1/social.mp4", thumbnail_path: null, duration_ms: 45000, size_bytes: 18000000, folder: "Widgets", tags: ["social"], created_at: "2025-02-10T00:00:00Z" },
-    { id: "media-7", org_id: "org-1", name: "Event Announcement.jpg", type: "image", storage_path: "org-1/event.jpg", thumbnail_path: null, duration_ms: 7000, size_bytes: 210000, folder: "Corporate", tags: ["event"], created_at: "2025-02-15T00:00:00Z" },
-    { id: "media-8", org_id: "org-1", name: "Lunch Menu.jpg", type: "image", storage_path: "org-1/menu.jpg", thumbnail_path: null, duration_ms: 15000, size_bytes: 320000, folder: "Cafeteria", tags: ["menu", "food"], created_at: "2025-02-20T00:00:00Z" },
+    { id: "media-1", org_id: "org-1", name: "Welcome Banner.jpg", type: "image", storage_path: "org-1/welcome.jpg", thumbnail_path: null, duration_ms: 5000, size_bytes: 245000, folder: "Marketing", tags: ["welcome", "brand"], orientation: "landscape", source_type: "upload", external_url: null, created_at: "2025-01-05T00:00:00Z" },
+    { id: "media-2", org_id: "org-1", name: "Product Launch.mp4", type: "video", storage_path: "org-1/launch.mp4", thumbnail_path: null, duration_ms: 30000, size_bytes: 15000000, folder: "Marketing", tags: ["product"], orientation: "landscape", source_type: "upload", external_url: null, created_at: "2025-01-10T00:00:00Z" },
+    { id: "media-3", org_id: "org-1", name: "Company Overview.mp4", type: "video", storage_path: "org-1/overview.mp4", thumbnail_path: null, duration_ms: 60000, size_bytes: 25000000, folder: "Corporate", tags: ["about"], orientation: "landscape", source_type: "upload", external_url: null, created_at: "2025-01-15T00:00:00Z" },
+    { id: "media-4", org_id: "org-1", name: "Special Offer.jpg", type: "image", storage_path: "org-1/offer.jpg", thumbnail_path: null, duration_ms: 8000, size_bytes: 180000, folder: "Marketing", tags: ["promo"], orientation: "portrait", source_type: "upload", external_url: null, created_at: "2025-02-01T00:00:00Z" },
+    { id: "media-5", org_id: "org-1", name: "Weather Widget.png", type: "image", storage_path: "org-1/weather.png", thumbnail_path: null, duration_ms: 10000, size_bytes: 95000, folder: "Widgets", tags: ["utility"], orientation: "landscape", source_type: "upload", external_url: null, created_at: "2025-02-05T00:00:00Z" },
+    { id: "media-6", org_id: "org-1", name: "Social Media Feed.mp4", type: "video", storage_path: "org-1/social.mp4", thumbnail_path: null, duration_ms: 45000, size_bytes: 18000000, folder: "Widgets", tags: ["social"], orientation: "portrait", source_type: "upload", external_url: null, created_at: "2025-02-10T00:00:00Z" },
+    { id: "media-7", org_id: "org-1", name: "Event Announcement.jpg", type: "image", storage_path: "org-1/event.jpg", thumbnail_path: null, duration_ms: 7000, size_bytes: 210000, folder: "Corporate", tags: ["event"], orientation: "landscape", source_type: "upload", external_url: null, created_at: "2025-02-15T00:00:00Z" },
+    { id: "media-8", org_id: "org-1", name: "Lunch Menu.jpg", type: "image", storage_path: "org-1/menu.jpg", thumbnail_path: null, duration_ms: 15000, size_bytes: 320000, folder: "Cafeteria", tags: ["menu", "food"], orientation: "portrait", source_type: "upload", external_url: null, created_at: "2025-02-20T00:00:00Z" },
+    { id: "media-9", org_id: "org-1", name: "Lobby Live Feed", type: "video", storage_path: null, thumbnail_path: null, duration_ms: null, size_bytes: null, folder: "Live", tags: ["lobby", "stream"], orientation: null, source_type: "link", external_url: "https://example.com/lobby-stream.m3u8", created_at: "2025-03-01T00:00:00Z" },
   ],
   playlists: [
     { id: "pl-1", org_id: "org-1", name: "Morning Loop", created_at: "2025-01-10T00:00:00Z", playlist_items: [{ count: 4 }], screens: { screens: [{ name: "Main Lobby Display" }] } },
@@ -150,10 +151,10 @@ export let mockData = {
     { id: "pl-5", org_id: "org-1", name: "Emergency Alerts", created_at: "2025-01-05T00:00:00Z", playlist_items: [{ count: 1 }], screens: { screens: [{ name: "Main Lobby Display" }, { name: "Second Floor Lobby" }] } },
   ],
   playlist_items: [
-    { id: "pli-1", playlist_id: "pl-1", media_item_id: "media-1", position: 0, duration_ms: 5000, created_at: "2025-01-10T00:00:00Z", media_items: { id: "media-1", name: "Welcome Banner.jpg", type: "image", storage_path: "org-1/welcome.jpg", thumbnail_path: null, duration_ms: 5000, size_bytes: 245000, folder: "Marketing", tags: ["welcome"], created_at: "2025-01-05T00:00:00Z" } },
-    { id: "pli-2", playlist_id: "pl-1", media_item_id: "media-2", position: 1, duration_ms: 30000, created_at: "2025-01-10T00:00:00Z", media_items: { id: "media-2", name: "Product Launch.mp4", type: "video", storage_path: "org-1/launch.mp4", thumbnail_path: null, duration_ms: 30000, size_bytes: 15000000, folder: "Marketing", tags: ["product"], created_at: "2025-01-10T00:00:00Z" } },
-    { id: "pli-3", playlist_id: "pl-1", media_item_id: "media-4", position: 2, duration_ms: 8000, created_at: "2025-01-10T00:00:00Z", media_items: { id: "media-4", name: "Special Offer.jpg", type: "image", storage_path: "org-1/offer.jpg", thumbnail_path: null, duration_ms: 8000, size_bytes: 180000, folder: "Marketing", tags: ["promo"], created_at: "2025-02-01T00:00:00Z" } },
-    { id: "pli-4", playlist_id: "pl-1", media_item_id: "media-5", position: 3, duration_ms: 10000, created_at: "2025-01-10T00:00:00Z", media_items: { id: "media-5", name: "Weather Widget.png", type: "image", storage_path: "org-1/weather.png", thumbnail_path: null, duration_ms: 10000, size_bytes: 95000, folder: "Widgets", tags: ["utility"], created_at: "2025-02-05T00:00:00Z" } },
+    { id: "pli-1", playlist_id: "pl-1", media_item_id: "media-1", position: 0, duration_ms: 5000, repeat_count: 1, created_at: "2025-01-10T00:00:00Z", media_items: { id: "media-1", name: "Welcome Banner.jpg", type: "image", storage_path: "org-1/welcome.jpg", thumbnail_path: null, duration_ms: 5000, size_bytes: 245000, folder: "Marketing", tags: ["welcome"], created_at: "2025-01-05T00:00:00Z" } },
+    { id: "pli-2", playlist_id: "pl-1", media_item_id: "media-2", position: 1, duration_ms: 30000, repeat_count: 1, created_at: "2025-01-10T00:00:00Z", media_items: { id: "media-2", name: "Product Launch.mp4", type: "video", storage_path: "org-1/launch.mp4", thumbnail_path: null, duration_ms: 30000, size_bytes: 15000000, folder: "Marketing", tags: ["product"], created_at: "2025-01-10T00:00:00Z" } },
+    { id: "pli-3", playlist_id: "pl-1", media_item_id: "media-4", position: 2, duration_ms: 8000, repeat_count: 1, created_at: "2025-01-10T00:00:00Z", media_items: { id: "media-4", name: "Special Offer.jpg", type: "image", storage_path: "org-1/offer.jpg", thumbnail_path: null, duration_ms: 8000, size_bytes: 180000, folder: "Marketing", tags: ["promo"], created_at: "2025-02-01T00:00:00Z" } },
+    { id: "pli-4", playlist_id: "pl-1", media_item_id: "media-5", position: 3, duration_ms: 10000, repeat_count: 1, created_at: "2025-01-10T00:00:00Z", media_items: { id: "media-5", name: "Weather Widget.png", type: "image", storage_path: "org-1/weather.png", thumbnail_path: null, duration_ms: 10000, size_bytes: 95000, folder: "Widgets", tags: ["utility"], created_at: "2025-02-05T00:00:00Z" } },
   ],
   templates: [
     { id: "tpl-1", org_id: "org-1", name: "Full Screen", is_preset: true, zones: [{ id: "z1", x: 0, y: 0, w: 100, h: 100 }], created_at: "2025-01-01T00:00:00Z", playlists: null },
@@ -164,24 +165,6 @@ export let mockData = {
     { id: "sched-1", org_id: "org-1", screen_id: "screen-1", group_id: null, playlist_id: "pl-1", template_id: null, is_default: true, priority: 0, start_at: null, end_at: null, recurrence: null, created_at: "2025-01-10T00:00:00Z", screens: { name: "Main Lobby Display" }, screen_groups: null, playlists: { name: "Morning Loop" }, templates: null },
     { id: "sched-2", org_id: "org-1", screen_id: "screen-3", group_id: null, playlist_id: "pl-2", template_id: null, is_default: true, priority: 0, start_at: null, end_at: null, recurrence: null, created_at: "2025-01-15T00:00:00Z", screens: { name: "Board Room" }, screen_groups: null, playlists: { name: "Product Showcase" }, templates: null },
     { id: "sched-3", org_id: "org-1", screen_id: "screen-5", group_id: null, playlist_id: "pl-3", template_id: null, is_default: true, priority: 0, start_at: null, end_at: null, recurrence: null, created_at: "2025-02-01T00:00:00Z", screens: { name: "Cafeteria Menu Board" }, screen_groups: null, playlists: { name: "Cafeteria Feed" }, templates: null },
-  ],
-  franchises: [
-    { id: "franchise-1", org_id: "org-1", name: "Hyderabad Region", territory_area: "Hyderabad and surrounding areas", manager_user_id: "user-2", created_at: "2026-07-01T00:00:00Z" },
-    { id: "franchise-2", org_id: "org-1", name: "Chennai Region", territory_area: "Chennai metro", manager_user_id: "user-2", created_at: "2026-07-01T00:00:00Z" },
-  ],
-  advertisers: [
-    { id: "adv-1", user_id: "user-1", company_name: "ACME Ads", created_at: "2026-07-01T00:00:00Z" },
-  ],
-  ads: [
-    { id: "ad-1", advertiser_id: "adv-1", media_item_id: "media-1", playlist_item_id: null, status: "approved", submitted_by_franchise_id: null, created_at: "2026-07-01T00:00:00Z" },
-  ],
-  ad_franchise_targets: [
-    { id: "aft-1", ad_id: "ad-1", franchise_id: "franchise-1", status: "approved" },
-    { id: "aft-2", ad_id: "ad-1", franchise_id: "franchise-2", status: "pending" },
-  ],
-  screen_locations: [
-    { id: "sl-1", screen_id: "screen-1", lat: 17.3850, lng: 78.4867, recorded_at: "2026-07-07T10:00:00Z" },
-    { id: "sl-2", screen_id: "screen-2", lat: 17.3860, lng: 78.4870, recorded_at: "2026-07-07T10:05:00Z" },
   ],
   play_logs: autoLogs,
 };

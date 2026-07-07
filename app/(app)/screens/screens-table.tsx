@@ -133,11 +133,15 @@ export function ScreensTable({ screens, groups, orgId }: { screens: Screen[]; gr
                   </TableCell>
                   <TableCell>
                     <Tooltip>
-                      <TooltipTrigger>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(screen.id)} className="h-8 w-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
+                      <TooltipTrigger 
+                         render={
+                          <Button variant="ghost" 
+                          size="sm" onClick={() => handleDelete(screen.id)} 
+                          className="h-8 w-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        }
+                        />
                       <TooltipContent>Delete screen</TooltipContent>
                     </Tooltip>
                   </TableCell>
