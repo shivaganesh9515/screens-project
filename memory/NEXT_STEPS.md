@@ -45,6 +45,19 @@
 | 17 | Decide: use presigned URL upload or direct client upload | Media API route exists but isn't used |
 | 18 | Make pairing codes collision-resistant | Uses `Math.random()` currently |
 
+### 🚀 Marketing Website
+
+| # | Task | Status | Plan Location |
+|---|------|--------|---------------|
+| 19 | **Build marketing website** | Planned | `docs/plans/2026-07-07-marketing-website.md` |
+| | Landing page (`/`) | — | Hero, stats, how it works, features grid, CTA |
+| | Features page (`/features`) | — | 6 detailed feature sections |
+| | Pricing page (`/pricing`) | — | 3 tiers + comparison table + FAQ |
+| | About page (`/about`) | — | Mission, story, team, values |
+| | Contact page (`/contact`) | — | Form + contact info |
+| | **Tech** | — | Next.js 16, Tailwind v4, Framer Motion, dark theme |
+| | **Estimated time** | — | 6-8 hours, can parallelize across 3 people |
+
 ---
 
 ## Recently Completed
