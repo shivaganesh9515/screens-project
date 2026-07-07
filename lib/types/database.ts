@@ -71,6 +71,7 @@ export interface PlaylistItem {
   media_item_id: string;
   position: number;
   duration_ms: number;
+  repeat_count: number; 
   created_at: string;
 }
 
