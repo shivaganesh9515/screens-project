@@ -1,91 +1,103 @@
 # soumya — Task Status Report
 
-**Branch:** `soumya` → `soumya-pending`
-**Last Updated:** July 7, 2026 — 6:45 IST
+**Branch:** `soumya`
+**Last Updated:** July 7, 2026 — 6:00 IST
 
 ---
 
 ## Overall Progress
 
-### Phase 1 Tasks (Original — Screen Registration & Management)
-
 | # | Task | Status | Files Changed |
 |---|------|--------|---------------|
-| 1 | Rework "Add Screen" flow — unique number + franchise picker | ✅ **COMPLETED** | `add-screen-modal.tsx`, `screens/page.tsx`, `lib/types/database.ts`, `lib/supabase/mock-data.ts`, `lib/supabase/mock-client.ts` |
-| 2 | Screens table — surface new metadata | ✅ **COMPLETED** | `screens-table.tsx`, `mock-data.ts` |
-| 3 | Screen detail view — unique number + metadata | ✅ **COMPLETED** | `screen-detail.tsx`, `database.ts` |
-| 4 | Franchise-scoped screen list | 🔄 **In Progress** (on `soumya-pending` branch) | `screens/page.tsx` |
-
-### Phase 2 Tasks (Updated — Media, Playlist, Settings UI)
-
-| # | Task | Status | Notes |
-|---|------|--------|-------|
-| 3 | Media upload — orientation filter + live video link | ✅ **COMPLETED** | Upload dialog now has orientation toggle + Upload/Live Link mode |
-| 4 | Playlist builder — repeat count per item | ✅ **Already built by srinitha** (merged to master) | `playlist-builder.tsx` has `repeat_count` input + save |
-| 5 | Screensaver picker — settings section | ✅ **Already built by srinitha** (merged to master) | `settings-form.tsx` has full media picker + save/clear |
-| 6 | Read-only invite toggle | ✅ **Already built** (merged to master) | Invite form has role selector with `viewer` option |
+| 1 | Rework "Add Screen" flow — unique number + franchise picker | ✅ **COMPLETED** (July 7, 6:00 IST) | `app/(app)/screens/add-screen-modal.tsx`, `app/(app)/screens/page.tsx`, `lib/types/database.ts`, `lib/supabase/mock-data.ts`, `lib/supabase/mock-client.ts` |
+| 2 | Screens table — surface new metadata | ✅ **COMPLETED** (July 7, 4:00 IST) | `app/(app)/screens/screens-table.tsx`, `lib/supabase/mock-data.ts` |
+| 3 | Screen detail view — unique number + metadata | ✅ **COMPLETED** (July 7, 5:32 IST) | `app/(app)/screens/[id]/screen-detail.tsx`, `lib/types/database.ts` |
+| 4 | Franchise-scoped screen list | ⏳ **WAITING** | `app/(app)/screens/page.tsx` |
 
 ---
 
 ## Detailed Breakdown
 
-### ✅ Phase 1 — All 3 core tasks complete
+### ✅ Task 1 — COMPLETED (July 7, 6:00 IST)
 
-**Tasks 1-3** (Add Screen, Screens Table, Screen Detail) — all built, typechecked, and reviewed. See previous status entries for full details.
+**Requirements checklist:**
 
-**Task 4** — Franchise scoping on `screens/page.tsx` — needs harshitha's shared RBAC hook or ad-hoc role check. Schema is ready (`franchise_id`, `franchises` table, `franchise_manager` role all in master).
+| # | Requirement | Status |
+|---|-------------|--------|
+| 1 | Remove old pairing-code-first flow | ✅ Done |
+| 2 | Admin enters pre-printed unique number to register | ✅ Done |
+| 3 | Orientation toggle (landscape / portrait) | ✅ Done |
+| 4 | Size type select (32in / 43in / 55in / 65in / 75in / 86in) | ✅ Done |
+| 5 | Screen type — static / bus / auto | ✅ Done |
+| 6 | Connectivity type — SIM (4G/5G) / WiFi | ✅ Done |
+| 7 | Location (lat/lng) — shown only for static screens; skipped for bus/auto (manaswini's GPS handles live tracking) | ✅ Done |
+| 8 | **Franchise selection dropdown + `franchise_id` in insert** | ✅ **Done** (was unblocked by pulling master with franchise schema) |
 
----
-
-### ✅ Phase 2 — Task 3: Media upload form updates
-
-**What was built (July 7, 6:30 IST):**
-- **Live Video Link mode** — tab toggle at top of dialog (Upload File / Live Video Link)
-  - Link mode shows a URL input for HLS/DASH streaming URLs
-  - Saves with `source_type: "link"` and `external_url`
-- **Orientation selection** — ToggleGroup (Landscape / Portrait) in both modes
-- Saves `orientation`, `source_type`, `external_url` to `media_items` table
-- Updated `lib/types/database.ts` — added `orientation`, `source_type`, `external_url` to shared `MediaItem` interface
-- TypeScript: ✅ zero errors | Code review: ✅ clean
-
-**Files changed:**
-- `app/(app)/media/media-upload.tsx` — main upload dialog rewrite
-- `lib/types/database.ts` — MediaItem interface updated
-
----
-
-### ✅ Phase 2 — Tasks 4, 5, 6: Already built (verified)
-
-All three tasks were already implemented by srinitha's merges into master:
-
-| Task | Where | Evidence |
-|------|-------|----------|
-| **4. Playlist repeat count** | `playlist-builder.tsx` | `repeat_count` field on items, input in UI, saved in inserts |
-| **5. Screensaver picker** | `settings-form.tsx` | Full media picker dialog, save/clear buttons, `screensaver_media_id` on orgs |
-| **6. Read-only invite toggle** | `settings-form.tsx` | Role selector has `admin`/`editor`/`viewer` options |
+**What was built:**
+- Rewrote `add-screen-modal.tsx` to replace old pairing-code flow with **unique number registration**
+- Form fields implemented: unique number (auto-uppercase, required), screen name (optional), orientation toggle, size select, screen type buttons, connectivity toggle, conditional lat/lng inputs, **franchise picker dropdown**, group select
+- On submit: inserts into `screens` table with `org_id` + all metadata fields + **`franchise_id`**
+- Success state: green confirmation card showing registered unique number
+- Duplicate unique number detection with user-friendly error message
+- Updated `screens/page.tsx` to fetch franchises and pass them to the modal
+- Added `Franchise` interface + `franchise_id` to `Screen` type
+- Added 3 mock franchises with screens assigned to them
+- TypeScript: ✅ zero errors | Code review: ✅ no issues found
 
 ---
 
-### ⏳ Task 4 (Original) — Franchise-scoped screen list
+### ✅ Task 2 — COMPLETED (July 7, 4:00 IST)
+
+**What was built:**
+- Updated `screens-table.tsx` with 3 new columns:
+  - **Type** — colored icon badges for Static (blue), Bus (amber), Auto (purple)
+  - **Orientation** — maximize icon with rotation for portrait mode
+  - **Connectivity** — WiFi or SIM icon with tooltip on hover
+- Added **screen type filter** bar (All Types / Static / Bus / Auto)
+- Added **orientation filter** bar (All Orient. / Landscape / Portrait)
+- **Unique number** displayed below screen name in monospace font, included in search
+- Updated `lib/supabase/mock-data.ts` with new fields for all 5 mock screens
+- TypeScript: ✅ zero errors
+- Column names confirmed matching ashwanth's migration: ✅
+
+---
+
+### ✅ Task 3 — COMPLETED (July 7, 5:32 IST)
+
+**What was built:**
+- Rewrote `screen-detail.tsx` with all new metadata fields
+- **Unique number** — prominently displayed in a highlighted gradient card with monospace font, verification label, and one-click copy button
+- **Hardware & Connectivity section** (all editable):
+  - **Orientation** — ToggleGroup (Landscape / Portrait)
+  - **Screen Size** — Select dropdown (32in / 43in / 55in / 65in / 75in / 86in)
+  - **Screen Type** — button group (Static / Bus / Auto) with icons
+  - **Connectivity** — ToggleGroup (WiFi / SIM 4G/5G)
+- **Location section** — lat/lng inputs for static screens; auto-tracked message for bus/auto
+- **Info section** — Group (editable), Resolution, Paired At, Last Seen (read-only)
+- **Tags** — editable comma-separated input
+- Edit/Cancel state management restores original values on cancel
+- Updated `lib/types/database.ts` — added `unique_number`, `orientation`, `size_type`, `screen_type`, `connectivity_type`, `lat`, `lng` to the `Screen` interface
+- TypeScript: ✅ zero errors
+- Code review: ✅ no issues found
+
+---
+
+### ⏳ Task 4 — WAITING
 
 **What's needed:**
 - Franchise scoping in `screens/page.tsx` — franchise managers see only their screens
 - Server-side filter by `franchise_id` when role is `franchise_manager`
 
-**Unblocked:** Schema has `franchise_id` on `screens` + `franchises` table + `franchise_manager` role. Ready to build once role-check pattern is confirmed.
+**Blocked by:** harshitha's shared RBAC hook for role checking (cleaner than building ad-hoc)
 
 ---
 
 ## Git Status
 
-- New branch `soumya-pending` created from latest master
-- Working tree has uncommitted changes:
-  - `app/(app)/media/media-upload.tsx` — orientation + live link
-  - `lib/types/database.ts` — MediaItem fields
-  - `tasks/soumya-STATUS.md` — this update
+- Working tree may have uncommitted changes (merged master + added franchise picker)
 
 ## Next Steps
 
-1. **Build Task 4** — franchise scoping on screens page (add `franchise_id` filter based on user role)
-2. **Add franchise column** to `screens-table.tsx` showing franchise name
-3. **Show franchise** in `screen-detail.tsx` edit view
+1. Build Task 4 — franchise-scoped screen list (needs harshitha's RBAC hook)
+2. Add franchise column to screens-table.tsx
+3. Show franchise name in screen-detail.tsx

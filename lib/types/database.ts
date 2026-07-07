@@ -22,10 +22,19 @@ export interface ScreenGroup {
   created_at: string;
 }
 
+export interface Franchise {
+  id: string;
+  org_id: string;
+  managed_by: string | null;
+  name: string;
+  created_at: string;
+}
+
 export interface Screen {
   id: string;
   org_id: string;
   group_id: string | null;
+  franchise_id: string | null;
   anon_user_id: string | null;
   name: string;
   unique_number: string | null;
@@ -44,6 +53,7 @@ export interface Screen {
   tags: string[] | null;
   created_at: string;
   screen_groups?: { name: string } | null;
+  franchises?: { name: string } | null;
 }
 
 export interface MediaItem {

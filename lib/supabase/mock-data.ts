@@ -120,6 +120,11 @@ export let mockData = {
     { org_id: "org-1", user_id: "user-3", role: "franchise", joined_at: "2025-02-01T00:00:00Z", orgs: { id: "org-1", name: "My Company", slug: "my-company", plan: "free", timezone: "UTC", logo_path: null, screensaver_media_id: null, created_at: "2025-01-01T00:00:00Z" } },
     { org_id: "org-1", user_id: "user-4", role: "advertiser", joined_at: "2025-02-15T00:00:00Z", orgs: { id: "org-1", name: "My Company", slug: "my-company", plan: "free", timezone: "UTC", logo_path: null, screensaver_media_id: null, created_at: "2025-01-01T00:00:00Z" } },
   ],
+  franchises: [
+    { id: "franchise-1", org_id: "org-1", managed_by: "user-3", name: "Downtown District", created_at: "2025-01-01T00:00:00Z" },
+    { id: "franchise-2", org_id: "org-1", managed_by: null, name: "Westside Region", created_at: "2025-01-05T00:00:00Z" },
+    { id: "franchise-3", org_id: "org-1", managed_by: null, name: "Eastside Territory", created_at: "2025-01-10T00:00:00Z" },
+  ],
   screen_groups: [
     { id: "group-1", org_id: "org-1", name: "Lobby", created_at: "2025-01-01T00:00:00Z" },
     { id: "group-2", org_id: "org-1", name: "Conference Rooms", created_at: "2025-01-01T00:00:00Z" },

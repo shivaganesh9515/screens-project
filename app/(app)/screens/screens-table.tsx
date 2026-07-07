@@ -36,6 +36,7 @@ interface Screen {
   screen_type: string | null;
   connectivity_type: string | null;
   screen_groups: { name: string } | null;
+  franchises: { name: string } | null;
 }
 
 interface Group { id: string; name: string; }
@@ -182,6 +183,7 @@ export function ScreensTable({ screens, groups, orgId }: { screens: Screen[]; gr
               <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</TableHead>
               <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Orientation</TableHead>
               <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Connectivity</TableHead>
+              <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Franchise</TableHead>
               <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Group</TableHead>
               <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Last Seen</TableHead>
               <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tags</TableHead>
@@ -191,7 +193,7 @@ export function ScreensTable({ screens, groups, orgId }: { screens: Screen[]; gr
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="py-20 text-center">
+                <TableCell colSpan={10} className="py-20 text-center">
                   <MonitorSmartphone className="mx-auto mb-3 h-10 w-10 text-muted-foreground/30" />
                   <p className="text-sm font-medium text-muted-foreground">No screens found</p>
                   <p className="text-xs text-muted-foreground/60">{search ? "Try a different search term" : "Add a screen to get started"}</p>
@@ -232,6 +234,7 @@ export function ScreensTable({ screens, groups, orgId }: { screens: Screen[]; gr
                     <ConnectivityIcon type={screen.connectivity_type} />
                     {!screen.connectivity_type && <span className="text-sm text-muted-foreground">—</span>}
                   </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{screen.franchises?.name ?? "—"}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{screen.screen_groups?.name ?? "—"}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{formatRelativeTime(screen.last_seen)}</TableCell>
                   <TableCell>

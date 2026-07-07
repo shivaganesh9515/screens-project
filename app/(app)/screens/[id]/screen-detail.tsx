@@ -37,6 +37,7 @@ interface Screen {
   lat: number | null;
   lng: number | null;
   screen_groups: { name: string } | null;
+  franchises: { name: string } | null;
 }
 
 interface Group { id: string; name: string; }
@@ -106,6 +107,7 @@ export function ScreenDetail({ screen, groups, schedules, orgId }: { screen: Scr
 
   const infoItems = [
     { icon: Layers, label: "Group", value: screen.screen_groups?.name ?? "—" },
+    { icon: Layers, label: "Franchise", value: screen.franchises?.name ?? "—" },
     { icon: Monitor, label: "Resolution", value: screen.resolution ?? "Unknown" },
     { icon: Clock, label: "Paired At", value: formatDate(screen.paired_at) },
     { icon: Clock, label: "Last Seen", value: formatRelativeTime(screen.last_seen) },

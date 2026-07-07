@@ -16,14 +16,16 @@ import { cn } from "@/lib/utils";
 import { Loader2, Plus, MonitorSmartphone, CheckCircle, Wifi, Smartphone, MapPin, Maximize2 } from "lucide-react";
 
 interface Group { id: string; name: string; }
+interface Franchise { id: string; name: string; }
 
-export function AddScreenModal({ groups, orgId }: { groups: Group[]; orgId: string }) {
+export function AddScreenModal({ groups, franchises, orgId }: { groups: Group[]; franchises: Franchise[]; orgId: string }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [uniqueNumber, setUniqueNumber] = useState("");
   const [name, setName] = useState("");
   const [groupId, setGroupId] = useState("");
+  const [franchiseId, setFranchiseId] = useState("");
   const [orientation, setOrientation] = useState<"landscape" | "portrait">("landscape");
   const [sizeType, setSizeType] = useState("");
   const [screenType, setScreenType] = useState<"static" | "bus" | "auto">("static");
@@ -52,6 +54,7 @@ export function AddScreenModal({ groups, orgId }: { groups: Group[]; orgId: stri
         size_type: sizeType || null,
         screen_type: screenType,
         connectivity_type: connectivityType,
+        franchise_id: franchiseId || null,
         ...(showLocation && lat && lng ? { lat: parseFloat(lat), lng: parseFloat(lng) } : {}),
         tags: [],
         is_online: false,
@@ -237,6 +240,21 @@ export function AddScreenModal({ groups, orgId }: { groups: Group[]; orgId: stri
                 </div>
               </div>
             )}
+
+            {/* Franchise */}
+            <div className="space-y-2">
+              <Label htmlFor="franchise">Franchise Territory (optional)</Label>
+              <Select value={franchiseId || "none"} onValueChange={(v) => setFranchiseId(v === "none" || v === null ? "" : v)}>
+                <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="No franchise" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No franchise</SelectItem>
+                  {franchises.map((f) => (<SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Assign this screen to a franchise territory for scoped management
+              </p>
+            </div>
 
             {/* Group */}
             <div className="space-y-2">
