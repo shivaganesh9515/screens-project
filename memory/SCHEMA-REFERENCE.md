@@ -221,3 +221,46 @@ CREATE TABLE ad_franchise_targets (
 - `media-upload.tsx` insert has no `folder` or `tags`
 - `quick-deploy-widget.tsx` `handlePush` never calls supabase
 - Never insert into `users` table — it doesn't exist
+
+## API Endpoints (Franchise Advertiser Workflow)
+
+### POST /api/ads
+Creates a new advertiser ad submission.
+- Authentication: Cookie-based via `createClient()` + `supabase.auth.getUser()`
+- Advertiser is resolved from the authenticated user (`advertisers.user_id`)
+- `advertiser_id` and `org_id` are never accepted from the client
+- Request body: `{ "name": string, "media_item_id": string | null, "franchise_ids": string[] }`
+- Inserts one row into `ads` (status defaults to `pending`)
+- Inserts one row per franchise into `ad_franchise_targets` (status defaults to `pending`)
+- Rolls back the ad if franchise target creation fails
+
+### POST /api/ads/[adId]/approve
+Franchise manager approves an ad for their franchise.
+- Authentication: Cookie-based via `createClient()` + `supabase.auth.getUser()`
+- Authorization: user must have `franchise_manager` role in the franchise's org and be the franchise's `managed_by` user
+- Request body: `{ "franchise_id": string }`
+- Validates the ad exists, the franchise exists, and the ad is targeted to that franchise
+- Updates `ad_franchise_targets`: `status = 'approved'`, `reviewed_by = user.id`, `reviewed_at = now()`
+- Does NOT update `ads.status`
+- Does NOT create schedules or playlist_items
+
+### POST /api/ads/[adId]/reject
+Franchise manager rejects an ad for their franchise.
+- Same authentication and authorization as the approve endpoint
+- Request body: `{ "franchise_id": string }`
+- Same validation as the approve endpoint
+- Updates `ad_franchise_targets`: `status = 'rejected'`, `reviewed_by = user.id`, `reviewed_at = now()`
+- Does NOT update `ads.status`
+
+## Current Backend Status
+
+### Completed
+- Advertiser ad submission endpoint
+- Franchise approval endpoint
+- Franchise rejection endpoint
+
+### Pending
+- Automatic schedule creation after approval
+
+### Reason
+The current schema has no relationship between franchises and screens (or screen_groups), so an approved franchise cannot be resolved into `screen_id` values required by the `schedules` table.
