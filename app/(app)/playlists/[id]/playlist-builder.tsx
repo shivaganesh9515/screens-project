@@ -88,7 +88,7 @@ export function PlaylistBuilder({ playlist, mediaItems, orgId }: { playlist: Pla
                   <Plus className="h-4 w-4" /> Add Items
                 </Button>
               }
-              />
+            />
             <DialogContent className="sm:max-w-lg rounded-2xl"><DialogHeader><DialogTitle>Add Media Items</DialogTitle></DialogHeader>
               <div className="space-y-3">
                 <div className="relative"><Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input placeholder="Search media..." value={search} onChange={(e) => setSearch(e.target.value)} className="h-10 rounded-xl pl-10" /></div>

@@ -45,7 +45,17 @@ export function PlaylistsList({ playlists, orgId }: { playlists: Playlist[]; org
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div><h2 className="text-2xl font-bold tracking-tight text-foreground">Playlists</h2><p className="text-sm text-muted-foreground">Create and manage content playlists</p></div>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger><Button className="rounded-xl gap-2 h-10 shadow-sm" type="button"><Plus className="h-4 w-4" /> Create Playlist</Button></DialogTrigger>
+          <DialogTrigger
+            render={
+              <Button
+                  className="rounded-xl gap-2 h-10 shadow-sm"
+                  type="button"
+              />
+            }
+          >
+              <Plus className="h-4 w-4" />
+              Create Playlist
+          </DialogTrigger>
           <DialogContent className="sm:max-w-md rounded-2xl"><DialogHeader><DialogTitle>Create Playlist</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2"><Label>Playlist Name</Label><Input placeholder="Morning Loop" value={name} onChange={(e) => setName(e.target.value)} required className="h-11 rounded-xl" /></div>
