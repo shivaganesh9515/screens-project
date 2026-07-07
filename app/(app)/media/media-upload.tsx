@@ -8,15 +8,18 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Upload, Loader2, FileType, X, Check } from "lucide-react";
+import { Upload, Loader2, FileType, X, Check, Link } from "lucide-react";
 
 export function MediaUpload({ orgId }: { orgId: string }) {
   const [open, setOpen] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState<Record<string, number>>({});
+  const [mode, setMode] = useState<"file" | "link">("file");
   const [folder, setFolder] = useState("");
   const [tagsInput, setTagsInput] = useState("");
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkName, setLinkName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const supabase = createClient();
@@ -59,44 +62,98 @@ export function MediaUpload({ orgId }: { orgId: string }) {
     setUploading(false); toast.success(`${files.length} file(s) uploaded`); setFiles([]); setFolder(""); setTagsInput(""); setOpen(false); router.refresh();
   };
 
+  const handleAddLink = async () => {
+    if (!linkUrl.trim()) { toast.error("Please enter a video URL"); return; }
+    if (!linkName.trim()) { toast.error("Please enter a name"); return; }
+    setUploading(true);
+    const { error } = await supabase.from("media_items").insert({
+      org_id: orgId,
+      name: linkName.trim(),
+      type: "video",
+      source_type: "link",
+      external_url: linkUrl.trim(),
+      folder: folder || null,
+      tags: tagsInput.split(",").map((t) => t.trim()).filter(Boolean).length > 0
+        ? tagsInput.split(",").map((t) => t.trim()).filter(Boolean)
+        : null,
+    });
+    if (error) { toast.error("Failed to add link"); setUploading(false); return; }
+    toast.success("Live video link added"); setLinkUrl(""); setLinkName(""); setFolder(""); setTagsInput(""); setOpen(false); setUploading(false); router.refresh();
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button className="rounded-xl gap-2 h-10 shadow-sm" type="button"><Upload className="h-4 w-4" /> Upload Media</Button>} />
       <DialogContent className="sm:max-w-xl rounded-2xl shadow-card-elevated">
-        <DialogHeader><DialogTitle>Upload Media</DialogTitle><DialogDescription>Drag and drop files or click to browse. Supports JPG, PNG, GIF, WebP, and MP4.</DialogDescription></DialogHeader>
-        <div onDrop={handleDrop} onDragOver={(e) => e.preventDefault()} onClick={() => fileInputRef.current?.click()} className="group cursor-pointer rounded-2xl border-2 border-dashed border-border bg-muted/30 p-14 text-center transition-all hover:border-primary/40 hover:bg-primary-muted/50 active:scale-[0.99]">
-          <Upload className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40 transition-transform duration-200 group-hover:scale-110 group-hover:text-primary" />
-          <p className="text-sm font-medium text-muted-foreground">Drop files here or click to browse</p>
-          <p className="mt-1 text-xs text-muted-foreground/60">Max file size: 500MB per file</p>
-          <Input ref={fileInputRef} type="file" multiple accept="image/*,video/mp4,video/webm" className="hidden" onChange={handleFileSelect} />
+        <DialogHeader>
+          <DialogTitle>Add Media</DialogTitle>
+          <DialogDescription>Upload a file or add a live video URL.</DialogDescription>
+        </DialogHeader>
+
+        <div className="flex rounded-xl border border-border bg-muted/30 p-1">
+          <button type="button" onClick={() => setMode("file")} className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${mode === "file" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}><Upload className="h-4 w-4" /> Upload File</button>
+          <button type="button" onClick={() => setMode("link")} className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${mode === "link" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}><Link className="h-4 w-4" /> Live Video URL</button>
         </div>
-        {files.length > 0 && (
-          <div className="space-y-2 max-h-48 overflow-y-auto">
-            {files.map((file, i) => (
-              <div key={i} className="flex items-center justify-between rounded-xl bg-muted/50 px-4 py-3 border border-border">
-                <div className="flex items-center gap-3 min-w-0">
-                  <FileType className="h-5 w-5 shrink-0 text-muted-foreground" />
-                  <div className="min-w-0"><p className="truncate text-sm font-medium">{file.name}</p><p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(1)} MB</p></div>
-                </div>
-                {progress[file.name] === 100 ? <Check className="h-5 w-5 text-success shrink-0" /> : progress[file.name] === -1 ? <X className="h-5 w-5 text-destructive shrink-0" /> : !uploading && <Button variant="ghost" size="sm" onClick={() => removeFile(i)}><X className="h-4 w-4" /></Button>}
+
+        {mode === "file" ? (
+          <>
+            <div onDrop={handleDrop} onDragOver={(e) => e.preventDefault()} onClick={() => fileInputRef.current?.click()} className="group cursor-pointer rounded-2xl border-2 border-dashed border-border bg-muted/30 p-14 text-center transition-all hover:border-primary/40 hover:bg-primary-muted/50 active:scale-[0.99]">
+              <Upload className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40 transition-transform duration-200 group-hover:scale-110 group-hover:text-primary" />
+              <p className="text-sm font-medium text-muted-foreground">Drop files here or click to browse</p>
+              <p className="mt-1 text-xs text-muted-foreground/60">Max file size: 500MB per file</p>
+              <Input ref={fileInputRef} type="file" multiple accept="image/*,video/mp4,video/webm" className="hidden" onChange={handleFileSelect} />
+            </div>
+            {files.length > 0 && (
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {files.map((file, i) => (
+                  <div key={i} className="flex items-center justify-between rounded-xl bg-muted/50 px-4 py-3 border border-border">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <FileType className="h-5 w-5 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0"><p className="truncate text-sm font-medium">{file.name}</p><p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(1)} MB</p></div>
+                    </div>
+                    {progress[file.name] === 100 ? <Check className="h-5 w-5 text-success shrink-0" /> : progress[file.name] === -1 ? <X className="h-5 w-5 text-destructive shrink-0" /> : !uploading && <Button variant="ghost" size="sm" onClick={() => removeFile(i)}><X className="h-4 w-4" /></Button>}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
-        {files.length > 0 && (
-          <div className="space-y-3">
+            )}
+            {files.length > 0 && (
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="folder" className="text-sm font-medium">Folder</Label>
+                  <Input id="folder" placeholder="e.g. marketing, lobby" value={folder} onChange={(e) => setFolder(e.target.value)} className="h-10 rounded-xl border-border" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="tags" className="text-sm font-medium">Tags</Label>
+                  <Input id="tags" placeholder="e.g. marketing, lobby, promo" value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} className="h-10 rounded-xl border-border" />
+                  <p className="text-xs text-muted-foreground">Comma-separated values</p>
+                </div>
+              </div>
+            )}
+            {files.length > 0 && <Button onClick={handleUpload} disabled={uploading} className="w-full rounded-full gap-2">{uploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Uploading...</> : <><Upload className="h-4 w-4" /> Upload {files.length} file(s)</>}</Button>}
+          </>
+        ) : (
+          <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="folder" className="text-sm font-medium">Folder</Label>
-              <Input id="folder" placeholder="e.g. marketing, lobby" value={folder} onChange={(e) => setFolder(e.target.value)} className="h-10 rounded-xl border-border" />
+              <Label htmlFor="linkName" className="text-sm font-medium">Name</Label>
+              <Input id="linkName" placeholder="e.g. Beach Cam - Live" value={linkName} onChange={(e) => setLinkName(e.target.value)} className="h-10 rounded-xl border-border" />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="tags" className="text-sm font-medium">Tags</Label>
-              <Input id="tags" placeholder="e.g. marketing, lobby, promo" value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} className="h-10 rounded-xl border-border" />
+              <Label htmlFor="linkUrl" className="text-sm font-medium">Video URL</Label>
+              <Input id="linkUrl" placeholder="https://example.com/live-stream.m3u8" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} className="h-10 rounded-xl border-border" />
+              <p className="text-xs text-muted-foreground">Paste a direct link to a live video stream (HLS, RTMP, etc.)</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="folderLink" className="text-sm font-medium">Folder</Label>
+              <Input id="folderLink" placeholder="e.g. marketing, lobby" value={folder} onChange={(e) => setFolder(e.target.value)} className="h-10 rounded-xl border-border" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="tagsLink" className="text-sm font-medium">Tags</Label>
+              <Input id="tagsLink" placeholder="e.g. live, promo" value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} className="h-10 rounded-xl border-border" />
               <p className="text-xs text-muted-foreground">Comma-separated values</p>
             </div>
+            <Button onClick={handleAddLink} disabled={uploading} className="w-full rounded-full gap-2">{uploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Adding...</> : <><Link className="h-4 w-4" /> Add Live Video</>}</Button>
           </div>
         )}
-        {files.length > 0 && <Button onClick={handleUpload} disabled={uploading} className="w-full rounded-full gap-2">{uploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Uploading...</> : <><Upload className="h-4 w-4" /> Upload {files.length} file(s)</>}</Button>}
       </DialogContent>
     </Dialog>
   );
