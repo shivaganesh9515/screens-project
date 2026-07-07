@@ -1,32 +1,34 @@
-# harshitha — Three Dashboards, RBAC & Approval Workflow
+# harshitha's Tasks — Backend
 
-**Branch:** `harshitha`
-**Status:** NOT STARTED (continuing your existing dashboard/auth ownership from the previous round)
-**Depends on:** ashwanth's `franchises`, `advertisers`, `ads`, `ad_franchise_targets` tables and the extended `org_members` roles.
+**Your role:** Franchises, Advertisers, Ads, and Approvals (the backend/database side)
 
-## Tasks
+## What you're building, in plain words
+Right now the app only knows about one company (one "org"). We need it to understand **franchises** (local territories), **advertisers** (people who pay to show ads), and a **2-step approval system** before any ad goes live.
 
-### 1. Role-based routing / RBAC shell
-- Extend the auth/onboarding flow so a logging-in user lands on the right dashboard based on their role: `main_admin` → admin dashboard, `franchise_manager` → franchise dashboard, `advertiser` → advertiser dashboard.
-- This is the piece everyone else's role-scoped work depends on — get the routing/guard logic in early and document how to check "current user's role/franchise" so soumya/manaswini/abhinaya can reuse it instead of reinventing scoping checks.
+## Your tasks
 
-### 2. Main Admin dashboard
-- Global view: all franchises, all screens across territories, all advertisers.
-- Approval queue for **franchise-submitted ads** (franchise → main admin approval tier).
-- Franchise management: create/edit franchises, assign a franchise_manager user to one.
+**1. Create the new database tables**
+- `franchises` — one row per territory (name, which org it belongs to, who manages it)
+- `advertisers` — one row per advertiser account
+- `ads` — one row per ad someone submits (has a status: pending / approved / rejected)
+- `ad_franchise_targets` — since one ad can target multiple franchises, this tracks approval **separately for each franchise** (e.g. approved in Hyderabad, still pending in Chennai)
 
-### 3. Franchise dashboard ("the all-rounder")
-- Scoped to their own franchise/territory only — screens, schedules, playlists (reuse existing screens/schedule/playlist UI, just add the franchise scope filter).
-- Their own approval queue: **advertiser ads targeting their franchise** — approve/reject per-ad, per-franchise (remember: one ad can target multiple franchises, each approves independently).
-- Ability to submit their own ads, which then go to main admin for approval (Task 2's queue).
+**2. Add new user roles**
+- Right now roles are just admin/editor/viewer. Add `main_admin` and `franchise_manager` so we can tell who's who.
 
-### 4. Advertiser dashboard
-- Deliberately minimal: "My Ads" (list with per-franchise approval status), "Create Ad" (upload/select media, pick which franchises to target), and analytics (abhinaya owns the analytics queries — you own the page/routing shell it lives in).
-- An advertiser must never see other advertisers' data, other franchises' screens, or anything main-admin/franchise-level. Enforce via RLS (ashwanth) + don't fetch/render anything out of scope client-side either.
+**3. Build the approval logic**
+- Advertiser submits an ad → goes to the franchise manager(s) they targeted → they approve or reject.
+- Franchise wants to run their own ad → goes to the main admin to approve.
+- **Important:** once approved, actually create the real schedule so the ad plays on screens — don't just flip a status flag and stop there.
 
-### 5. The approval workflow itself
-- Ad submission → `pending` status → shows up in the relevant approval queue(s) → approve/reject action updates `ad_franchise_targets.status` (or the franchise-ads equivalent) → on approval, create the actual `schedules`/`playlist_items` entries so the ad actually plays on that franchise's screens.
-- Rejected ads should show a reason field if you want that level of polish (not required for v1, nice to have).
+**4. Lock down access (RLS)**
+- Advertisers should only ever see their own ads.
+- Franchise managers should only see ads for their own territory.
+- Main admin sees everything.
+- Also fix a bug from last time: right now any logged-in person can see every org's data — that needs to be locked down too.
 
-## Deliverable
-Three working, role-gated dashboards (main admin / franchise / advertiser) and a functioning two-tier approval workflow that actually results in approved ads getting scheduled onto real screens.
+**5. Write down what you built**
+- After each table/column you add, jot it in `memory/SCHEMA-REFERENCE.md` so others aren't guessing names.
+
+## Done means
+Franchises, advertisers, ads, and the approval flow all work end-to-end, and it's written down clearly for the rest of the team.

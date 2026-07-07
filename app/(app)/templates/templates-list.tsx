@@ -55,7 +55,7 @@ export function TemplatesList({ templates, orgId }: { templates: Template[]; org
       <div className="flex items-center justify-between">
         <div><h2 className="text-2xl font-bold tracking-tight text-foreground">Templates</h2><p className="text-sm text-muted-foreground">Create and manage screen layout templates</p></div>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger><Button className="rounded-xl gap-2 h-10 shadow-sm" type="button"><Plus className="h-4 w-4" /> New Template</Button></DialogTrigger>
+          <DialogTrigger render={<Button className="rounded-xl gap-2 h-10 shadow-sm" type="button"><Plus className="h-4 w-4" /> New Template</Button>} />
           <DialogContent className="sm:max-w-xl rounded-2xl"><DialogHeader><DialogTitle>Create Template</DialogTitle></DialogHeader>
             <form onSubmit={handleCreateCustom} className="space-y-4">
               <div className="space-y-2"><Label>Template Name</Label><Input placeholder="My Custom Layout" value={name} onChange={(e) => setName(e.target.value)} required className="h-11 rounded-xl" /></div>

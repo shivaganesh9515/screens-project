@@ -1,32 +1,43 @@
-# manaswini — Live Map, GPS Tracking & Player App Updates
+# manaswini's Tasks — Frontend
 
-**Branch:** `manaswini`
-**Status:** NOT STARTED
-**Depends on:** ashwanth's `screen_locations` table and `screens` lat/lng/screen_type columns.
+**Your role:** Live Map + The 3 Dashboards (what the user sees and clicks)
 
-## Tasks
+## What you're building, in plain words
+This is the biggest frontend piece: a live map showing all screens, and three separate dashboards for the three types of users (main admin, franchise, advertiser).
 
-### 1. Live map on the main home page
-File: `app/(app)/overview/page.tsx` (add a map panel, likely a new `overview-map.tsx` component on the left side of the layout)
-- Use a lightweight map library (MapLibre GL or Leaflet — avoid Google Maps to sidestep billing/API-key setup) to plot every screen as a point.
-- Static screens: plot at their fixed `lat`/`lng`.
-- Bus/auto screens: plot at their latest position from `screen_locations` (join on `screen_id`, `ORDER BY recorded_at DESC LIMIT 1` per screen).
-- Point color: **green if `is_online`, red/grey if offline** — reuse the existing `is_online` field.
-- Clicking a point should show the screen name + status (basic popover, doesn't need to be fancy).
+## Your tasks
 
-### 2. GPS reporting from the player app
-File: `app/player/[token]/page.tsx`
-- For screens where `screen_type` is `bus` or `auto`, use the browser Geolocation API (`navigator.geolocation.watchPosition` or a timed `getCurrentPosition` poll) to get lat/lng.
-- Send it to a new endpoint alongside (or merged with) the existing heartbeat call — e.g. extend `app/api/screens/heartbeat/route.ts` to accept optional `lat`/`lng` and insert a row into `screen_locations`.
-- Static screens skip this entirely (no GPS needed, no permission prompt).
-- Handle the geolocation permission prompt gracefully — if denied, don't break playback, just skip location reporting.
+**1. Live map on the home page**
+- Add a map on the left side of the main dashboard page.
+- Every screen shows up as a point: **green if online, red if offline**.
+- Static screens sit at a fixed spot. Bus/auto screens should move as their GPS location updates.
+- Clicking a point shows the screen's name and status.
 
-### 3. Live position updates on the map without a full page reload
-- Options: polling `screen_locations`/`screens` every N seconds, or Supabase Realtime subscription on the `screen_locations` table. Pick whichever is simpler to wire given the existing Supabase client setup — Realtime is nicer but check if it's already configured anywhere in the codebase first.
+**2. Get GPS working on the player screen itself**
+- On the actual screen device (bus/auto only), ask the browser for its location and send it up regularly, alongside the existing heartbeat ping.
+- Static screens don't need this — skip it for them.
 
-### 4. Offline detection (carried over from the earlier backlog — fits naturally here since it's status logic)
-- Flip `is_online` to false after ~90s of no heartbeat. This likely needs a scheduled Supabase Edge Function (cron) rather than client-side logic, since nothing else polls screens when the dashboard isn't open.
-- Coordinate with ashwanth if this needs a new column (e.g. `last_seen` already exists — check if it's sufficient or if you need `offline_since`).
+**3. Send people to the right dashboard after login**
+- Main admin → admin dashboard
+- Franchise manager → franchise dashboard
+- Advertiser → advertiser dashboard
 
-## Deliverable
-A live map on the home page with correct green/red status per screen, moving markers for bus/auto screens, and the player app actually reporting GPS for vehicle-mounted screens.
+**4. Main Admin dashboard**
+- See everything: all franchises, all screens, all advertisers.
+- A queue to approve ads that franchises submit for themselves.
+- A way to create/edit franchises and assign a manager to each.
+
+**5. Franchise dashboard ("the all-rounder")**
+- Only shows their own territory's screens/schedules/playlists.
+- A queue to approve/reject advertiser ads targeting their territory.
+- A way for the franchise to submit their own ad (goes to main admin for approval).
+
+**6. Advertiser dashboard**
+- Kept simple: "My Ads" (with approval status per territory), "Create Ad" (pick media + pick which territories to target), and a page showing their own ad analytics.
+- They should never see anyone else's data.
+
+## Note
+Almost everything here depends on the backend team, especially harshitha's franchises/advertisers/ads work. Check `memory/SCHEMA-REFERENCE.md` first, and don't be afraid to ask soumya or ashwanth for help — this is a lot of ground to cover alone.
+
+## Done means
+Live map works with correct colors + moving vehicle markers, and all 3 dashboards are up and connected to the real approval flow.

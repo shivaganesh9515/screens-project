@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PlaylistBuilder } from "./playlist-builder";
 
@@ -10,7 +10,7 @@ export default async function PlaylistDetailPage({
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user) redirect("/login");
 
   const { data: member } = await supabase
     .from("org_members")
@@ -18,7 +18,9 @@ export default async function PlaylistDetailPage({
     .eq("user_id", user.id)
     .single();
 
-  if (!member) return null;
+  if (!member) {
+    redirect("/setup");
+  }
 
   const { data: playlist } = await supabase
     .from("playlists")

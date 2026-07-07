@@ -215,6 +215,10 @@ function getTableData(tableName: string): any[] | null {
     templates: "templates",
     schedules: "schedules",
     play_logs: "play_logs",
+    franchises: "franchises",
+    advertisers: "advertisers",
+    ads: "ads",
+    ad_franchise_targets: "ad_franchise_targets",
     screen_locations: "screen_locations",
   };
 

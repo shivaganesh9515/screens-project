@@ -1,6 +1,6 @@
 # Database Schema Reference
 
-## Tables (from `supabase/migrations/00001_schema.sql`)
+## Tables (from `supabase/migrations/00001_schema.sql` and `00003_franchise_ads.sql`)
 
 ### orgs
 Top-level entity. Each org has users, screens, media, etc.
@@ -22,7 +22,7 @@ Links users to orgs with roles. No `users` table — `auth.users` is source of t
 CREATE TABLE org_members (
   org_id UUID REFERENCES orgs(id) ON DELETE CASCADE,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  role TEXT NOT NULL DEFAULT 'editor' CHECK (role IN ('admin', 'editor', 'viewer')),
+  role TEXT NOT NULL DEFAULT 'editor' CHECK (role IN ('admin', 'editor', 'viewer', 'main_admin', 'franchise_manager')),
   joined_at TIMESTAMPTZ DEFAULT NOW(),
   PRIMARY KEY (org_id, user_id)
 );
@@ -144,6 +144,58 @@ CREATE TABLE play_logs (
   started_at TIMESTAMPTZ NOT NULL,
   ended_at TIMESTAMPTZ,
   duration_ms INTEGER
+);
+```
+
+### franchises
+Franchise locations belonging to an org.
+```sql
+CREATE TABLE franchises (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID REFERENCES orgs(id) ON DELETE CASCADE,
+  managed_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  name TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### advertisers
+Advertiser accounts linked to auth.users.
+```sql
+CREATE TABLE advertisers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID REFERENCES orgs(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  name TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### ads
+Ad creatives belonging to an advertiser.
+```sql
+CREATE TABLE ads (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  advertiser_id UUID REFERENCES advertisers(id) ON DELETE CASCADE,
+  org_id UUID REFERENCES orgs(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  media_item_id UUID REFERENCES media_items(id) ON DELETE SET NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### ad_franchise_targets
+Junction table linking ads to target franchises, with per-target approval tracking.
+```sql
+CREATE TABLE ad_franchise_targets (
+  ad_id UUID REFERENCES ads(id) ON DELETE CASCADE,
+  franchise_id UUID REFERENCES franchises(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  reviewed_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  reviewed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (ad_id, franchise_id)
 );
 ```
 

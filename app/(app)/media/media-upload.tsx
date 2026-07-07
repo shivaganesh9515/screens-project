@@ -61,7 +61,7 @@ export function MediaUpload({ orgId }: { orgId: string }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger><Button className="rounded-xl gap-2 h-10 shadow-sm" type="button"><Upload className="h-4 w-4" /> Upload Media</Button></DialogTrigger>
+      <DialogTrigger render={<Button className="rounded-xl gap-2 h-10 shadow-sm" type="button"><Upload className="h-4 w-4" /> Upload Media</Button>} />
       <DialogContent className="sm:max-w-xl rounded-2xl shadow-card-elevated">
         <DialogHeader><DialogTitle>Upload Media</DialogTitle><DialogDescription>Drag and drop files or click to browse. Supports JPG, PNG, GIF, WebP, and MP4.</DialogDescription></DialogHeader>
         <div onDrop={handleDrop} onDragOver={(e) => e.preventDefault()} onClick={() => fileInputRef.current?.click()} className="group cursor-pointer rounded-2xl border-2 border-dashed border-border bg-muted/30 p-14 text-center transition-all hover:border-primary/40 hover:bg-primary-muted/50 active:scale-[0.99]">

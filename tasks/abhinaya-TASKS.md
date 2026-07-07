@@ -1,27 +1,36 @@
-# abhinaya — Analytics: Uptime History & Ad Play Counts
+# abhinaya's Tasks — Backend
 
-**Branch:** `abhinaya`
-**Status:** NOT STARTED
-**Depends on:** ashwanth's `ad_id` column on `play_logs`, and (for uptime history) a way to log status changes over time — check with ashwanth/manaswini whether that needs a new `screen_status_log` table (recommended: log a row every time `is_online` flips, rather than trying to reconstruct history from nothing).
+**Your role:** Screen Details, GPS & Analytics (the backend/database side)
 
-## Tasks
+## What you're building, in plain words
+Screens need more details attached to them (like orientation and a unique ID number), we need to track vehicle location (buses/autos), and analytics needs real history instead of just a live snapshot.
 
-### 1. Screen on-time / off-time history
-- If it doesn't exist yet, this needs a `screen_status_log` table: `screen_id`, `status` (online/offline), `changed_at`. Flag this to ashwanth if his migration doesn't already include it — you may need to add it yourself since you're the consumer.
-- Build a view/query that sums total online duration vs offline duration per screen over a date range (day/week/month).
-- File: `app/(app)/analytics/analytics-dashboard.tsx` — add an uptime/downtime chart or stat per screen, replacing today's live-snapshot-only `is_online` boolean display.
-- Keep the existing label fix from the old backlog: make clear this is now real historical data, not a snapshot (once this ships, that caveat goes away).
+## Your tasks
 
-### 2. Ad play count analytics
-- Query `play_logs` filtered by `ad_id` (once ashwanth adds that column) to count plays per ad, per franchise, over a date range.
-- Surface this in the main admin / franchise analytics view: "Ad X played 340 times this week across Hyderabad."
+**1. Add new details to each screen**
+- Orientation (landscape/portrait)
+- Size type
+- Screen type: static (shop/mall) or vehicle-mounted (bus/auto)
+- A **unique number** — this is how a screen gets registered/verified (replaces the old random pairing code)
+- Connectivity: SIM or WiFi
+- Location (lat/lng) — only for static screens
 
-### 3. Advertiser-scoped analytics (the advertiser's own dashboard)
-- This is the advertiser-facing piece: an advertiser should see **only their own ads'** play counts and status (pending/approved/rejected per franchise), nothing else.
-- Likely a new route, e.g. `app/(advertiser)/analytics/page.tsx` — coordinate with harshitha since she owns the overall dashboard/routing structure and RBAC; you own the analytics queries and charts within it.
+**2. Track vehicle location (GPS)**
+- New table that logs lat/lng over time for bus/auto screens.
+- Update the heartbeat endpoint so it can accept a location update along with the regular "I'm alive" ping.
 
-### 4. Fix the existing analytics grouping bug while you're in this file
-- `analytics-dashboard.tsx` currently groups stats by screen **name** instead of **id** — two screens with the same name incorrectly merge. Fix to group by id.
+**3. Track online/offline history**
+- New table that logs every time a screen goes online or offline (not just the current status) — this is what makes real uptime/downtime charts possible.
+- Also: if a screen hasn't sent a heartbeat in ~90 seconds, mark it offline automatically.
 
-## Deliverable
-Real historical uptime/downtime per screen, ad-level play-count analytics, and an advertiser-scoped analytics view showing only their own ads.
+**4. Ad play counts**
+- Add a way to link each play event to the specific ad that played, so we can count "this ad played 340 times."
+
+**5. Write the analytics queries**
+- Uptime/downtime per screen over time.
+- Play count per ad.
+- A version scoped to just one advertiser's own ads (for their dashboard).
+- Fix a bug: analytics currently groups screens by **name**, which merges two screens that happen to share a name — should group by ID instead.
+
+## Done means
+Screens have all their new details, GPS is being logged, uptime history works, and the analytics queries are ready for the frontend to use. Write it all down in `memory/SCHEMA-REFERENCE.md`.

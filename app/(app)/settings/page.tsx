@@ -1,10 +1,11 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SettingsForm } from "./settings-form";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user) redirect("/login");
 
   const { data: member } = await supabase
     .from("org_members")
@@ -12,13 +13,21 @@ export default async function SettingsPage() {
     .eq("user_id", user.id)
     .single();
 
-  if (!member) return null;
+  if (!member) {
+    redirect("/setup");
+  }
 
   // Fetch members separately without complex joins
   const { data: members } = await supabase
     .from("org_members")
     .select("org_id, user_id, role, joined_at")
     .eq("org_id", member.org_id);
+
+  const { data: mediaItems } = await supabase
+    .from("media_items")
+    .select("id, name, type, thumbnail_path")
+    .eq("org_id", member.org_id)
+    .order("created_at", { ascending: false });
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -31,6 +40,7 @@ export default async function SettingsPage() {
         org={member.orgs as any}
         members={members ?? []}
         role={member.role}
+        mediaItems={mediaItems ?? []}
       />
     </div>
   );
