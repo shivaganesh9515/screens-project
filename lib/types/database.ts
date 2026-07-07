@@ -5,7 +5,6 @@ export interface Org {
   plan: string;
   timezone: string;
   logo_path: string | null;
-  screensaver_media_id: string | null;
   created_at: string;
 }
 
@@ -36,14 +35,6 @@ export interface Screen {
   is_online: boolean;
   resolution: string | null;
   tags: string[] | null;
-  orientation: string | null;
-  size_type: string | null;
-  screen_type: string | null;
-  unique_number: string | null;
-  connectivity_type: string | null;
-  lat: number | null;
-  lng: number | null;
-  franchise_id: string | null;
   created_at: string;
   screen_groups?: { name: string } | null;
 }
@@ -53,15 +44,12 @@ export interface MediaItem {
   org_id: string;
   name: string;
   type: "image" | "video";
-  storage_path: string | null;
+  storage_path: string;
   thumbnail_path: string | null;
   duration_ms: number | null;
   size_bytes: number | null;
   folder: string | null;
   tags: string[] | null;
-  orientation: "portrait" | "landscape" | null;
-  source_type: "upload" | "link";
-  external_url: string | null;
   created_at: string;
 }
 
@@ -80,7 +68,6 @@ export interface PlaylistItem {
   media_item_id: string;
   position: number;
   duration_ms: number;
-  repeat_count: number; 
   created_at: string;
 }
 
@@ -139,7 +126,6 @@ export interface PlayLog {
   started_at: string;
   ended_at: string | null;
   duration_ms: number | null;
-  ad_id: string | null;
   screens?: { name: string } | null;
   media_items?: { name: string; type: string } | null;
 }
@@ -147,40 +133,34 @@ export interface PlayLog {
 export interface Franchise {
   id: string;
   org_id: string;
+  managed_by: string | null;
   name: string;
-  territory_area: string | null;
-  manager_user_id: string | null;
   created_at: string;
 }
 
 export interface Advertiser {
   id: string;
-  user_id: string;
-  company_name: string;
+  org_id: string;
+  user_id: string | null;
+  name: string;
   created_at: string;
 }
 
 export interface Ad {
   id: string;
-  advertiser_id: string | null;
+  advertiser_id: string;
+  org_id: string;
+  name: string;
   media_item_id: string | null;
-  playlist_item_id: string | null;
-  status: 'pending' | 'approved' | 'rejected';
-  submitted_by_franchise_id: string | null;
+  status: "pending" | "approved" | "rejected";
   created_at: string;
 }
 
 export interface AdFranchiseTarget {
-  id: string;
   ad_id: string;
   franchise_id: string;
-  status: 'pending' | 'approved' | 'rejected';
-}
-
-export interface ScreenLocation {
-  id: string;
-  screen_id: string;
-  lat: number;
-  lng: number;
-  recorded_at: string;
+  status: "pending" | "approved" | "rejected";
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
 }

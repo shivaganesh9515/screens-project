@@ -1,35 +1,80 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import { Monitor } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { Monitor, Wifi, WifiOff } from "lucide-react";
 
-interface PlaylistItem { id: string; media_items: { id: string; name: string; type: string; storage_path: string; duration_ms: number | null; }; duration_ms: number; }
-interface PlayerState { paired: boolean; screenId: string | null; pairingCode: string | null; playlist: PlaylistItem[]; currentIndex: number; playing: boolean; }
+interface MediaItem {
+  id: string;
+  name: string;
+  type: string;
+  url: string;
+  duration_ms: number | null;
+}
+
+interface PlaylistItemData {
+  id: string;
+  media_items: MediaItem | null;
+  duration_ms: number | null;
+  position: number;
+}
+
+interface NowPlayingResponse {
+  playlist: { id: string } | null;
+  items: PlaylistItemData[];
+}
+
+interface PlayLogEntry {
+  screen_id: string;
+  playlist_id: string;
+  media_item_id: string;
+  started_at: string;
+  ended_at: string;
+  duration_ms: number;
+}
 
 export default function PlayerPage({ params }: { params: Promise<{ token: string }> }) {
-  const [state, setState] = useState<PlayerState>({ paired: false, screenId: null, pairingCode: null, playlist: [], currentIndex: 0, playing: false });
+  const [code, setCode] = useState("");
+  const [name, setName] = useState("");
+  const [paired, setPaired] = useState(false);
+  const [screenId, setScreenId] = useState<string | null>(null);
+  const [pairing, setPairing] = useState(false);
+  const [pairError, setPairError] = useState("");
+  const [playlist, setPlaylist] = useState<PlaylistItemData[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [playlistId, setPlaylistId] = useState<string | null>(null);
+  const [offline, setOffline] = useState(false);
+  const [activePlaylistId, setActivePlaylistId] = useState<string | null>(null);
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const wakeLockRef = useRef<any>(null);
   const hideCursorTimer = useRef<NodeJS.Timeout | null>(null);
   const heartbeatInterval = useRef<NodeJS.Timeout | null>(null);
-  const supabase = createClient();
+  const playLogBuffer = useRef<PlayLogEntry[]>([]);
+  const advanceTimer = useRef<NodeJS.Timeout | null>(null);
+  const fetchInterval = useRef<NodeJS.Timeout | null>(null);
+  const playlistRef = useRef<PlaylistItemData[]>([]);
+  const playStartTimeRef = useRef<string>("");
 
+  useEffect(() => { playlistRef.current = playlist; }, [playlist]);
+
+  // Restore paired state
   useEffect(() => {
-    const screenId = localStorage.getItem("screen_id");
-    if (screenId) setState((prev) => ({ ...prev, paired: true, screenId }));
-    else { const code = Math.random().toString(36).substring(2, 8).toUpperCase(); setState((prev) => ({ ...prev, pairingCode: code })); }
+    const stored = localStorage.getItem("screen_id");
+    if (stored) {
+      setScreenId(stored);
+      setPaired(true);
+    }
   }, []);
 
-  const sendHeartbeat = useCallback(async () => {
-    if (!state.screenId) return;
-    try { await fetch("/api/screens/heartbeat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ screen_id: state.screenId }) }); } catch {}
-  }, [state.screenId]);
-
+  // Register service worker for offline support
   useEffect(() => {
-    if (state.paired && state.screenId) { heartbeatInterval.current = setInterval(sendHeartbeat, 30000); return () => { if (heartbeatInterval.current) clearInterval(heartbeatInterval.current); }; }
-  }, [state.paired, state.screenId, sendHeartbeat]);
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
+  }, []);
 
+  // Kiosk mode
   useEffect(() => {
     const enterFullscreen = async () => { try { await document.documentElement.requestFullscreen(); } catch {} };
     const requestWakeLock = async () => { try { if ("wakeLock" in navigator) wakeLockRef.current = await (navigator as any).wakeLock.request("screen"); } catch {} };
@@ -38,13 +83,190 @@ export default function PlayerPage({ params }: { params: Promise<{ token: string
     const handleContextMenu = (e: MouseEvent) => e.preventDefault();
     const handleKeyDown = (e: KeyboardEvent) => { if (e.key === "Escape" || e.key === "F11" || (e.ctrlKey && e.key === "w") || (e.ctrlKey && e.key === "q")) e.preventDefault(); };
     enterFullscreen(); requestWakeLock();
-    document.addEventListener("visibilitychange", handleVisibility); document.addEventListener("mousemove", handleMouseMove); document.addEventListener("contextmenu", handleContextMenu); document.addEventListener("keydown", handleKeyDown);
-    return () => { document.removeEventListener("visibilitychange", handleVisibility); document.removeEventListener("mousemove", handleMouseMove); document.removeEventListener("contextmenu", handleContextMenu); document.removeEventListener("keydown", handleKeyDown); if (hideCursorTimer.current) clearTimeout(hideCursorTimer.current); if (wakeLockRef.current) wakeLockRef.current.release(); };
+    document.addEventListener("visibilitychange", handleVisibility);
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("contextmenu", handleContextMenu);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("contextmenu", handleContextMenu);
+      document.removeEventListener("keydown", handleKeyDown);
+      if (hideCursorTimer.current) clearTimeout(hideCursorTimer.current);
+      if (wakeLockRef.current) wakeLockRef.current.release();
+    };
   }, []);
 
-  useEffect(() => { if (state.paired) setState((prev) => ({ ...prev, playing: true })); }, [state.paired]);
+  // Pair screen: send pairing code to backend, receive screen_id
+  const handlePair = async () => {
+    if (code.length !== 6) return;
+    setPairing(true);
+    setPairError("");
+    try {
+      const res = await fetch(`/api/screens/pair/${code}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name || undefined }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        setPairError(err.error || "Pairing failed");
+        setPairing(false);
+        return;
+      }
+      const data = await res.json();
+      const sid = data.screen.id;
+      localStorage.setItem("screen_id", sid);
+      setScreenId(sid);
+      setPaired(true);
+    } catch {
+      setPairError("Connection failed");
+    }
+    setPairing(false);
+  };
 
-  if (!state.paired) {
+  // Fetch current schedule
+  const fetchNowPlaying = useCallback(async () => {
+    if (!screenId) return;
+    try {
+      const res = await fetch(`/api/screens/${screenId}/schedule`);
+      if (!res.ok) return;
+      const data: NowPlayingResponse = await res.json();
+      if (data.playlist?.id && data.playlist.id !== activePlaylistId) {
+        setPlaylist(data.items);
+        setPlaylistId(data.playlist.id);
+        setActivePlaylistId(data.playlist.id);
+        setCurrentIndex(0);
+      } else if (!data.playlist) {
+        setPlaylist([]);
+        setActivePlaylistId(null);
+      }
+    } catch {}
+  }, [screenId, activePlaylistId]);
+
+  useEffect(() => {
+    if (!paired || !screenId) return;
+    fetchNowPlaying();
+    fetchInterval.current = setInterval(fetchNowPlaying, 60000);
+    return () => { if (fetchInterval.current) clearInterval(fetchInterval.current); };
+  }, [paired, screenId, fetchNowPlaying]);
+
+  // Realtime subscription for schedule updates
+  useEffect(() => {
+    if (!paired || !screenId) return;
+    const supabase = createClient();
+    const channel = supabase.channel(`screen:${screenId}`);
+    channel.on("broadcast", { event: "schedule_update" }, () => {
+      fetchNowPlaying();
+    });
+    channel.subscribe();
+    return () => { channel.unsubscribe(); };
+  }, [paired, screenId, fetchNowPlaying]);
+
+  // Advance to next item, loop at end
+  const advance = useCallback(() => {
+    setCurrentIndex((prev) => {
+      const next = prev + 1;
+      if (next >= playlistRef.current.length) return 0;
+      return next;
+    });
+  }, []);
+
+  // Log play with correct schema field names
+  const logPlay = useCallback((mediaItemId: string, durationMs: number) => {
+    if (!screenId || !playlistId) return;
+    const now = new Date().toISOString();
+    playLogBuffer.current.push({
+      screen_id: screenId,
+      playlist_id: playlistId,
+      media_item_id: mediaItemId,
+      started_at: playStartTimeRef.current || now,
+      ended_at: now,
+      duration_ms: durationMs,
+    });
+  }, [screenId, playlistId]);
+
+  // Heartbeat + flush play logs
+  const sendHeartbeat = useCallback(async () => {
+    if (!screenId) return;
+    try {
+      const res = await fetch("/api/screens/heartbeat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ screen_id: screenId }),
+      });
+      setOffline(!res.ok);
+      if (playLogBuffer.current.length > 0) {
+        await fetch("/api/play-logs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(playLogBuffer.current),
+        });
+        playLogBuffer.current = [];
+      }
+    } catch { setOffline(true); }
+  }, [screenId]);
+
+  useEffect(() => {
+    if (!paired || !screenId) return;
+    sendHeartbeat();
+    heartbeatInterval.current = setInterval(sendHeartbeat, 30000);
+    return () => { if (heartbeatInterval.current) clearInterval(heartbeatInterval.current); };
+  }, [paired, screenId, sendHeartbeat]);
+
+  // Playback engine: render images and video
+  useEffect(() => {
+    if (playlist.length === 0) return;
+    const item = playlist[currentIndex];
+    if (!item || !item.media_items) {
+      advance();
+      return;
+    }
+    const media = item.media_items;
+    const duration = item.duration_ms ?? media.duration_ms ?? 10000;
+    playStartTimeRef.current = new Date().toISOString();
+
+    if (media.type === "video") {
+      const video = videoRef.current;
+      if (!video) return;
+      video.src = media.url;
+      video.load();
+      video.play().catch(() => {});
+      let ended = false;
+      const onEnded = () => {
+        ended = true;
+        logPlay(media.id, duration);
+        advance();
+      };
+      video.addEventListener("ended", onEnded);
+      advanceTimer.current = setTimeout(() => {
+        if (!ended) {
+          video.removeEventListener("ended", onEnded);
+          logPlay(media.id, duration);
+          advance();
+        }
+      }, Math.max(duration, 30000));
+      return () => {
+        video.removeEventListener("ended", onEnded);
+        if (advanceTimer.current) clearTimeout(advanceTimer.current);
+        video.pause();
+        video.src = "";
+      };
+    } else {
+      advanceTimer.current = setTimeout(() => {
+        logPlay(media.id, duration);
+        advance();
+      }, duration);
+      return () => {
+        if (advanceTimer.current) clearTimeout(advanceTimer.current);
+      };
+    }
+  }, [currentIndex, playlist, advance, logPlay]);
+
+  // --- Render ---
+
+  // Unpaired: show code entry form
+  if (!paired) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-gradient-to-br from-sidebar via-[#0f1729] to-[#1a1f35]">
         <div className="text-center max-w-lg">
@@ -52,33 +274,88 @@ export default function PlayerPage({ params }: { params: Promise<{ token: string
             <Monitor className="h-8 w-8 text-white" />
           </div>
           <h1 className="mb-2 text-3xl font-bold text-white">Pair Your Screen</h1>
-          <p className="mb-10 text-sm text-sidebar-foreground">Enter this code in your dashboard to register this screen</p>
-          <div className="mx-auto mb-6 inline-block rounded-2xl bg-white/5 border border-white/10 px-14 py-8">
-            <p className="mb-3 text-xs font-medium uppercase tracking-wider text-sidebar-foreground">Pairing Code</p>
-            <p className="text-7xl font-bold tracking-[0.15em] text-white">{state.pairingCode}</p>
+          <p className="mb-10 text-sm text-sidebar-foreground">Enter the pairing code from your dashboard</p>
+          <div className="mx-auto mb-6 max-w-xs">
+            <input
+              type="text"
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 6))}
+              placeholder="000000"
+              className="w-full text-center text-4xl font-bold tracking-[0.2em] py-6 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-primary/50"
+              maxLength={6}
+              disabled={pairing}
+              autoFocus
+            />
           </div>
-          <p className="text-sm text-sidebar-foreground/60">Code expires in 10 minutes</p>
+          <div className="mx-auto mb-4 max-w-xs">
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Device name (optional)"
+              className="w-full text-center text-sm py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-primary/50"
+              disabled={pairing}
+              maxLength={64}
+            />
+          </div>
+          {pairError && <p className="mb-4 text-sm text-red-400">{pairError}</p>}
+          <button
+            onClick={handlePair}
+            disabled={code.length !== 6 || pairing}
+            className="rounded-full bg-primary px-10 py-3 text-sm font-medium text-white disabled:opacity-50 hover:bg-primary-dark transition-colors"
+          >
+            {pairing ? "Connecting..." : "Pair Screen"}
+          </button>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="flex h-screen w-screen items-center justify-center bg-gradient-to-br from-sidebar via-[#0f1729] to-[#1a1f35]">
-      <div className="text-center max-w-lg">
-        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg shadow-green-500/20">
-          <Monitor className="h-8 w-8 text-white" />
-        </div>
-        <p className="text-3xl font-bold text-white">Screens</p>
-        <p className="mt-3 text-lg text-sidebar-foreground">Waiting for content...</p>
-        <div className="mt-8 flex items-center justify-center gap-3">
-          <span className="flex h-3 w-3 items-center justify-center">
-            <span className="h-3 w-3 animate-ping rounded-full bg-green-500 opacity-75 absolute" />
-            <span className="h-2 w-2 rounded-full bg-green-500 relative" />
-          </span>
-          <span className="text-sm font-medium text-green-400">Connected</span>
+  // Paired but no content
+  if (playlist.length === 0) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-gradient-to-br from-sidebar via-[#0f1729] to-[#1a1f35]">
+        <div className="text-center max-w-lg">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg shadow-green-500/20">
+            <Monitor className="h-8 w-8 text-white" />
+          </div>
+          <p className="text-3xl font-bold text-white">Screens</p>
+          <p className="mt-3 text-lg text-sidebar-foreground">Waiting for content...</p>
+          <div className="mt-8 flex items-center justify-center gap-3">
+            <span className="flex h-3 w-3 items-center justify-center">
+              <span className="h-3 w-3 animate-ping rounded-full bg-green-500 opacity-75 absolute" />
+              <span className="h-2 w-2 rounded-full bg-green-500 relative" />
+            </span>
+            <span className="text-sm font-medium text-green-400">Connected</span>
+          </div>
         </div>
       </div>
+    );
+  }
+
+  // Playing: render real media
+  const currentItem = playlist[currentIndex]?.media_items;
+  return (
+    <div className="h-screen w-screen overflow-hidden bg-black">
+      {currentItem?.type === "video" ? (
+        <video
+          ref={videoRef}
+          key={currentItem.id}
+          className="h-full w-full object-contain animate-fade-in"
+          muted
+          playsInline
+          loop
+        />
+      ) : (
+        currentItem?.type === "image" && (
+          <img
+            key={currentItem.id}
+            src={currentItem.url}
+            alt={currentItem.name}
+            className="h-full w-full object-contain animate-fade-in"
+          />
+        )
+      )}
     </div>
   );
 }

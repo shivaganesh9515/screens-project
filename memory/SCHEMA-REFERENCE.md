@@ -1,11 +1,6 @@
 # Database Schema Reference
 
-> **Source of truth:** `supabase/migrations/` files (00001 through 00006).
-> **Types:** `lib/types/database.ts`
-
----
-
-## Tables
+## Tables (from `supabase/migrations/00001_schema.sql` and `00003_franchise_ads.sql`)
 
 ### orgs
 Top-level entity. Each org has users, screens, media, etc.
@@ -17,7 +12,6 @@ CREATE TABLE orgs (
   plan TEXT DEFAULT 'free',
   timezone TEXT DEFAULT 'UTC',
   logo_path TEXT,
-  screensaver_media_id UUID REFERENCES media_items(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
@@ -33,9 +27,6 @@ CREATE TABLE org_members (
   PRIMARY KEY (org_id, user_id)
 );
 ```
-**Update (00003):** Added `main_admin` and `franchise_manager` roles alongside existing `admin`, `editor`, `viewer`.
-- `main_admin`: Super-admin who sees everything across all orgs
-- `franchise_manager`: Manages a specific franchise territory
 
 ### screen_groups
 Groups of screens for bulk scheduling.
@@ -49,7 +40,7 @@ CREATE TABLE screen_groups (
 ```
 
 ### screens
-Physical display devices. Track pairing, location, and franchise assignment.
+Physical devices. Have pairing codes. Track online status.
 ```sql
 CREATE TABLE screens (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -64,24 +55,9 @@ CREATE TABLE screens (
   is_online BOOLEAN DEFAULT FALSE,
   resolution TEXT,
   tags TEXT[],
-  -- NEW COLUMNS (00003):
-  orientation TEXT CHECK (orientation IN ('landscape', 'portrait')),
-  size_type TEXT,
-  screen_type TEXT CHECK (screen_type IN ('static', 'bus', 'auto')),
-  unique_number TEXT UNIQUE NOT NULL,
-  connectivity_type TEXT CHECK (connectivity_type IN ('sim', 'wifi')),
-  lat DOUBLE PRECISION,
-  lng DOUBLE PRECISION,
-  franchise_id UUID REFERENCES franchises(id) ON DELETE SET NULL,  -- (00004)
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
-**Updates:**
-- **(00003):** Added `orientation`, `size_type`, `screen_type`, `unique_number`, `connectivity_type`, `lat`, `lng`
-- **(00004):** Added `franchise_id` FK → `franchises(id)`
-- `unique_number` replaces the random pairing code flow. Format: `SCR-NNN`
-- `screen_type` determines behavior: `static` = fixed location with lat/lng; `bus`/`auto` = GPS-tracked via `screen_locations`
-- `franchise_id` = null means unassigned to any franchise
 
 ### media_items
 Uploaded images and videos.
@@ -168,73 +144,80 @@ CREATE TABLE play_logs (
   started_at TIMESTAMPTZ NOT NULL,
   ended_at TIMESTAMPTZ,
   duration_ms INTEGER
-  -- NEW COLUMN (00005):
-  ad_id UUID REFERENCES ads(id) ON DELETE SET NULL,
 );
 ```
-**Update (00005):** Added `ad_id` FK → `ads(id)` — enables per-ad play count analytics (abhinaya).
 
----
-
-## 🆕 New Tables (ashwanth's milestone)
-
-### franchises (00003)
-Territory managers within an org. A franchise manages screens and schedules in a specific geographic area.
+### franchises
+Franchise locations belonging to an org.
 ```sql
 CREATE TABLE franchises (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id UUID REFERENCES orgs(id) ON DELETE CASCADE,
+  managed_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   name TEXT NOT NULL,
-  territory_area TEXT,
-  manager_user_id UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | UUID PK | Auto-generated |
-| `org_id` | UUID FK → orgs | Org this franchise belongs to |
-| `name` | TEXT NOT NULL | Display name (e.g. "Hyderabad Region") |
-| `territory_area` | TEXT nullable | Free-text description of coverage area |
-| `manager_user_id` | UUID FK → auth.users nullable | The franchise manager's auth user ID |
-| `created_at` | TIMESTAMPTZ | Auto-set |
 
-**Used by:** soumya (screen registration assigns franchise_id), harshitha (franchise dashboard scoping), manaswini (map filtering by franchise)
-
-### advertisers (00003)
-Independent ad-buyer accounts. NOT scoped to a single org — advertisers can target franchises across different orgs.
+### advertisers
+Advertiser accounts linked to auth.users.
 ```sql
 CREATE TABLE advertisers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  company_name TEXT NOT NULL,
+  org_id UUID REFERENCES orgs(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  name TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | UUID PK | Auto-generated |
-| `user_id` | UUID FK → auth.users | The advertiser's auth user ID (not org-scoped) |
-| `company_name` | TEXT NOT NULL | Display name |
-| `created_at` | TIMESTAMPTZ | Auto-set |
 
-**RLS:** `user_id = auth.uid()` — advertisers only see their own row.
-
-### ads (00004)
-Ad content submitted for approval. References media content and tracks approval status.
+### ads
+Ad creatives belonging to an advertiser.
 ```sql
 CREATE TABLE ads (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   advertiser_id UUID REFERENCES advertisers(id) ON DELETE CASCADE,
+  org_id UUID REFERENCES orgs(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
   media_item_id UUID REFERENCES media_items(id) ON DELETE SET NULL,
-  playlist_item_id UUID REFERENCES playlist_items(id) ON DELETE SET NULL,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
-  submitted_by_franchise_id UUID REFERENCES franchises(id) ON DELETE SET NULL,  -- (00005)
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | UUID PK | Auto-generated |
-| `advertiser_id` | UUID FK → advertisers nullable | The advertiser who created this ad (null if franchise-submitted) |
-| `media_item_id` | UUID FK → media_items nullable | Primary content reference (image/video). SET NULL on me
+
+### ad_franchise_targets
+Junction table linking ads to target franchises, with per-target approval tracking.
+```sql
+CREATE TABLE ad_franchise_targets (
+  ad_id UUID REFERENCES ads(id) ON DELETE CASCADE,
+  franchise_id UUID REFERENCES franchises(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  reviewed_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  reviewed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (ad_id, franchise_id)
+);
+```
+
+## Zone JSONB Format
+```json
+[
+  { "id": "z1", "x": 0, "y": 0, "w": 100, "h": 100, "playlist_id": null },
+  { "id": "z2", "x": 0, "y": 80, "w": 100, "h": 20, "playlist_id": "some-uuid" }
+]
+```
+- `x`, `y`, `w`, `h` are percentages (0-100)
+- `playlist_id` binds the zone to a playlist (currently never set — this is the main gap)
+
+## RLS Policies
+- All tables have org-isolation policies (select/insert/update/delete)
+- Users can only see data from orgs they're members of
+- Player uses `anon_user_id` to access its assigned screen
+- `playlist_items` has special policy allowing player to read via schedule
+
+## Common Mistakes
+- `JSON.stringify(zones)` before insert → double-encodes, breaks player
+- `schedule-calendar.tsx` only sets `screen_id`, never `group_id`
+- `media-upload.tsx` insert has no `folder` or `tags`
+- `quick-deploy-widget.tsx` `handlePush` never calls supabase
+- Never insert into `users` table — it doesn't exist
