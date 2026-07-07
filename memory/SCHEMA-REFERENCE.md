@@ -221,3 +221,89 @@ CREATE TABLE ad_franchise_targets (
 - `media-upload.tsx` insert has no `folder` or `tags`
 - `quick-deploy-widget.tsx` `handlePush` never calls supabase
 - Never insert into `users` table — it doesn't exist
+
+## Migration 00007 — RLS Access Control Completion
+
+### Purpose
+Completes the backend access-control model for franchises/advertisers by fixing remaining cross-organization RLS gaps and protecting previously unsecured tables.
+
+---
+
+## Updated Policies
+
+### ads
+
+#### Policy: ads_admin_all
+- Replaced previous policy.
+- Main admins/admins may access ads only within their own organization.
+- Access is scoped through:
+  - ads.org_id
+  - org_members.org_id
+- Uses both `USING` and `WITH CHECK` to correctly secure SELECT/INSERT/UPDATE/DELETE.
+
+---
+
+### ad_franchise_targets
+
+#### Policy: targets_admin_all
+- Replaced previous policy.
+- Main admins/admins may access approval targets only for ads belonging to their own organization.
+- Organization is resolved through:
+  - ad_franchise_targets.ad_id
+  - ads.org_id
+- Uses both `USING` and `WITH CHECK`.
+
+---
+
+### play_logs
+
+Row Level Security enabled.
+
+#### Policy: play_logs_select_org
+Allows authenticated organization members to read play logs only for screens belonging to their organization.
+
+Access path:
+
+play_logs
+→ screens
+→ org_id
+→ org_members
+
+#### Policy: play_logs_insert_player
+Allows only the paired screen player (`screens.anon_user_id`) to insert play log records for that screen.
+
+---
+
+### orgs
+
+#### Policy: orgs_update_admin
+Restored organization update permissions for:
+- admin
+- main_admin
+
+Scoped to the administrator's own organization.
+
+#### Policy: orgs_delete_admin
+Added organization delete permission for:
+- admin
+- main_admin
+
+Scoped to the administrator's own organization.
+
+---
+
+## Security Improvements
+
+- Fixed cross-organization access leak in admin RLS policies.
+- Added RLS protection for the previously unsecured `play_logs` table.
+- Preserved advertiser self-access policies.
+- Preserved franchise manager territory access policies.
+- Avoided PostgreSQL RLS recursion (`42P17`) by not introducing new policies on `org_members`.
+
+---
+
+## Notes
+
+This migration introduces **no schema changes** (no new tables or columns).
+
+It only updates Row Level Security policies to satisfy the franchise/advertiser access-control requirements.

@@ -6,6 +6,27 @@
 
 ---
 
+## Session 5 — July 7, 2026
+
+**AI Model:** opencode/big-pickle  
+**Branch:** `master`
+
+### What was done
+- **Verified migration 00007** — Reviewed `supabase/migrations/00007_rls_access_control.sql` against all client requirements; confirmed all 6 requirements satisfied (cross-org fix for `ads_admin_all`, org-scoped `targets_admin_all`, `play_logs` RLS, `orgs` admin policies, no recursion, existing policies untouched)
+- **Appended docs** — Added Migration 00007 documentation section to `memory/SCHEMA-REFERENCE.md` without modifying any existing content
+
+### State at end of session
+- SCHEMA-REFERENCE.md now documents all migrations including 00007
+- Working tree is clean
+
+### Problems encountered
+- None
+
+### Next session should
+- Tackle P0 priorities from NEXT_STEPS.md: connect real Supabase, or build player playback
+
+---
+
 ## Session 4 — July 7, 2026
 
 **AI Model:** opencode/mimo-v2.5-free  
