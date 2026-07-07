@@ -259,7 +259,7 @@ export default async function AdvertiserAnalyticsPage() {
 
 | # | Task | Est. Effort | Depends On | Status |
 |---|------|------------|------------|--------|
-| 4 | Fix screen grouping (name → id) | 15 min | None | ✅ **DONE** — grouped by `screen_id`, Cell keys use `entry.id` |
+| 4 | Fix screen grouping (name → id) | 15 min | None | ✅ **Done** — committed & pushed (`afc04a7`) |
 | 1 | Screen uptime/downtime history | 3-4 hrs | Ashwanth: `screen_status_log` table | 🔴 Blocked |
 | 2 | Ad play count analytics | 4-5 hrs | Ashwanth: `ads` table + `ad_id` on `play_logs` | 🔴 Blocked |
 | 3 | Advertiser-scoped analytics | 3-4 hrs | Harshitha: RBAC routing + layout | 🔴 Blocked |
@@ -268,10 +268,12 @@ export default async function AdvertiserAnalyticsPage() {
 
 ## 🎯 Recommended Order of Work
 
-1. **Immediately:** Start with **Task 4** (bug fix) — zero dependencies, quick win
-2. **While waiting for Ashwanth:** Review the existing analytics code thoroughly and plan the uptime history UI
-3. **When Ashwanth delivers schema:** Implement **Task 1** then **Task 2**
-4. **When Harshitha delivers RBAC:** Implement **Task 3** and wire into the advertiser route
+1. ✅ **Done:** Task 4 (bug fix)
+2. 🔴 **Waiting for team:** Tasks 1-3 require schema/RBAC from other team members
+   - Harshitha has `franchises`, `advertisers`, `ads` tables on her branch (not yet merged to master)
+   - Harshitha has NOT yet built RBAC routing
+   - `screen_status_log` table and `ad_id` column on `play_logs` still need to be created
+3. **When dependencies clear:** Implement **Task 1** → **Task 2** → **Task 3**
 
 ---
 

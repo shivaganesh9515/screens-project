@@ -123,9 +123,55 @@ export interface PlayLog {
   screen_id: string | null;
   media_item_id: string | null;
   playlist_id: string | null;
+  ad_id: string | null;
   started_at: string;
   ended_at: string | null;
   duration_ms: number | null;
   screens?: { name: string } | null;
   media_items?: { name: string; type: string } | null;
+}
+
+// Franchise / Advertiser system
+export interface Franchise {
+  id: string;
+  org_id: string;
+  managed_by: string | null;
+  name: string;
+  created_at: string;
+}
+
+export interface Advertiser {
+  id: string;
+  org_id: string;
+  user_id: string | null;
+  name: string;
+  created_at: string;
+}
+
+export interface Ad {
+  id: string;
+  advertiser_id: string;
+  org_id: string;
+  name: string;
+  media_item_id: string | null;
+  status: "pending" | "approved" | "rejected";
+  created_at: string;
+  media_items?: { name: string; type: string } | null;
+  advertisers?: { name: string } | null;
+}
+
+export interface AdFranchiseTarget {
+  ad_id: string;
+  franchise_id: string;
+  status: "pending" | "approved" | "rejected";
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+}
+
+export interface ScreenStatusLog {
+  id: string;
+  screen_id: string;
+  status: "online" | "offline";
+  changed_at: string;
 }
