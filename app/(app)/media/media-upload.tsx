@@ -37,11 +37,13 @@ export function MediaUpload({ orgId }: { orgId: string }) {
       const fileExt = file.name.split(".").pop();
       const filePath = `${orgId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
       const type = file.type.startsWith("video") ? "video" : "image";
+      let orientation: string | null = null;
       let thumbnailPath: string | null = null;
       if (type === "video") {
         try {
           const video = document.createElement("video"); video.src = URL.createObjectURL(file);
           await new Promise((resolve) => { video.onloadeddata = () => { video.currentTime = 0; setTimeout(resolve, 200); }; });
+          orientation = video.videoWidth >= video.videoHeight ? "landscape" : "portrait";
           const canvas = document.createElement("canvas"); canvas.width = video.videoWidth; canvas.height = video.videoHeight;
           canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
           const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), "image/webp", 80));
@@ -49,13 +51,20 @@ export function MediaUpload({ orgId }: { orgId: string }) {
           const { error: thumbError } = await supabase.storage.from("media").upload(thumbPath, blob, { contentType: "image/webp" });
           if (!thumbError) thumbnailPath = thumbPath; URL.revokeObjectURL(video.src);
         } catch {}
+      } else {
+        try {
+          const img = new Image(); img.src = URL.createObjectURL(file);
+          await new Promise((resolve) => { img.onload = resolve; });
+          orientation = img.naturalWidth >= img.naturalHeight ? "landscape" : "portrait";
+          URL.revokeObjectURL(img.src);
+        } catch {}
       }
       const { error: uploadError } = await supabase.storage.from("media").upload(filePath, file, { cacheControl: "3600" });
       if (uploadError) { toast.error(`Failed to upload ${file.name}`); setProgress((prev) => ({ ...prev, [file.name]: -1 })); continue; }
       let durationMs: number | null = null;
       if (type === "video") { const video = document.createElement("video"); video.src = URL.createObjectURL(file); await new Promise((resolve) => { video.onloadedmetadata = () => { durationMs = Math.round(video.duration * 1000); resolve(null); }; }); URL.revokeObjectURL(video.src); }
       const tags = tagsInput.split(",").map((t) => t.trim()).filter(Boolean);
-      const { error: dbError } = await supabase.from("media_items").insert({ org_id: orgId, name: file.name, type, storage_path: filePath, thumbnail_path: thumbnailPath, duration_ms: durationMs, size_bytes: file.size, folder: folder || null, tags: tags.length > 0 ? tags : null });
+      const { error: dbError } = await supabase.from("media_items").insert({ org_id: orgId, name: file.name, type, storage_path: filePath, thumbnail_path: thumbnailPath, duration_ms: durationMs, size_bytes: file.size, orientation, folder: folder || null, tags: tags.length > 0 ? tags : null });
       if (dbError) toast.error(`Failed to save ${file.name}`);
       else setProgress((prev) => ({ ...prev, [file.name]: 100 }));
     }
