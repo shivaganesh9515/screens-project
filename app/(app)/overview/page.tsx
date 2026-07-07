@@ -11,9 +11,10 @@ import { TopContent } from "./top-content";
 import { RecentMedia } from "./recent-media";
 import { ScreenStatusList } from "./screen-status-list";
 import { UpcomingSchedules } from "./upcoming-schedules";
+import { OverviewMap } from "@/components/overview/overview-map";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { BarChart3, ArrowRight } from "lucide-react";
+import { BarChart3, ArrowRight, MapIcon } from "lucide-react";
 
 interface ScreenRow {
   id: string;
@@ -54,6 +55,8 @@ export default async function OverviewPage() {
     { data: playlists },
     { data: screenGroups },
     { data: allMediaForMetrics },
+    { data: mapScreens },
+    { data: screenLocations },
   ] = await Promise.all([
     supabase.from("screens").select("*", { count: "exact", head: true }).eq("org_id", orgId),
     supabase.from("screens").select("*", { count: "exact", head: true }).eq("org_id", orgId).eq("is_online", true),
@@ -64,6 +67,8 @@ export default async function OverviewPage() {
     supabase.from("playlists").select("id, name").eq("org_id", orgId),
     supabase.from("screen_groups").select("id, name").eq("org_id", orgId),
     supabase.from("media_items").select("size_bytes").eq("org_id", orgId),
+    supabase.from("screens").select("id, name, latitude, longitude, is_online, screen_type").eq("org_id", orgId),
+    supabase.from("screen_locations").select("*").eq("org_id", orgId),
   ]);
 
   const screenRows = (screens ?? []) as ScreenRow[];
@@ -148,7 +153,13 @@ export default async function OverviewPage() {
         contentTrend={8}
       />
 
-      {/* ROW 2 — Split 60/40 */}
+      {/* ROW 2 — Live Map (full width) */}
+      <OverviewMap
+        screens={mapScreens ?? []}
+        locations={screenLocations ?? []}
+      />
+
+      {/* ROW 3 — Split 60/40 */}
       <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
         <PlaybackActivityChart playLogs={allPlayLogs ?? []} />
         <QuickDeployWidget

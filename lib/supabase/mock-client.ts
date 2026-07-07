@@ -215,6 +215,7 @@ function getTableData(tableName: string): any[] | null {
     templates: "templates",
     schedules: "schedules",
     play_logs: "play_logs",
+    screen_locations: "screen_locations",
   };
 
   const key = tableMap[tableName];
