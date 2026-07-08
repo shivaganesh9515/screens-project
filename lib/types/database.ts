@@ -22,10 +22,19 @@ export interface ScreenGroup {
   created_at: string;
 }
 
+export interface Franchise {
+  id: string;
+  org_id: string;
+  managed_by: string | null;
+  name: string;
+  created_at: string;
+}
+
 export interface Screen {
   id: string;
   org_id: string;
   group_id: string | null;
+  franchise_id: string | null;
   anon_user_id: string | null;
   name: string;
   unique_number: string | null;
@@ -46,6 +55,7 @@ export interface Screen {
   screen_type: "static" | "bus" | "auto" | null;
   created_at: string;
   screen_groups?: { name: string } | null;
+  franchises?: { name: string } | null;
 }
 
 export interface ScreenWithLocation extends Screen {
@@ -66,12 +76,15 @@ export interface MediaItem {
   org_id: string;
   name: string;
   type: "image" | "video";
-  storage_path: string;
+  storage_path: string | null;
   thumbnail_path: string | null;
   duration_ms: number | null;
   size_bytes: number | null;
   folder: string | null;
   tags: string[] | null;
+  orientation: string | null;
+  source_type: string;
+  external_url: string | null;
   created_at: string;
 }
 
