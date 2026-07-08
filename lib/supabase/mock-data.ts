@@ -30,6 +30,8 @@ function generatePlayLogs() {
     "pl-5": ["media-1", "media-7"],
   };
 
+  const mockAdIds = ["ad-1", "ad-2", "ad-3", "ad-4", "ad-5"];
+
   let logId = 0;
   const now = Date.now();
 
@@ -88,17 +90,24 @@ function generatePlayLogs() {
 
           const endedAt = new Date(startedAt.getTime() + durationVariation);
 
+          // ~20% of logs get an ad_id for ad play tracking
+          const adId = Math.random() < 0.2
+            ? mockAdIds[Math.floor(Math.random() * mockAdIds.length)]
+            : null;
+
           logId++;
           logs.push({
             id: `log-auto-${logId}`,
             screen_id: screen.id,
             media_item_id: mediaId,
             playlist_id: playlistId,
+            ad_id: adId,
             started_at: startedAt.toISOString(),
             ended_at: endedAt.toISOString(),
             duration_ms: durationVariation,
             screens: { name: screen.name },
             media_items: { name: media.name, type: media.type },
+            ads: adId ? { name: `Ad ${adId.replace("ad-", "")}` } : null,
           });
         }
       }
@@ -171,7 +180,52 @@ export let mockData = {
     { id: "sched-2", org_id: "org-1", screen_id: "screen-3", group_id: null, playlist_id: "pl-2", template_id: null, is_default: true, priority: 0, start_at: null, end_at: null, recurrence: null, created_at: "2025-01-15T00:00:00Z", screens: { name: "Board Room" }, screen_groups: null, playlists: { name: "Product Showcase" }, templates: null },
     { id: "sched-3", org_id: "org-1", screen_id: "screen-5", group_id: null, playlist_id: "pl-3", template_id: null, is_default: true, priority: 0, start_at: null, end_at: null, recurrence: null, created_at: "2025-02-01T00:00:00Z", screens: { name: "Cafeteria Menu Board" }, screen_groups: null, playlists: { name: "Cafeteria Feed" }, templates: null },
   ],
-  play_logs: autoLogs,
+  // Franchise / Advertiser mock data
+  franchises: [
+    { id: "franchise-1", org_id: "org-1", managed_by: null, name: "Downtown Hub", created_at: "2025-03-01T00:00:00Z" },
+    { id: "franchise-2", org_id: "org-1", managed_by: null, name: "Mall Location", created_at: "2025-03-05T00:00:00Z" },
+    { id: "franchise-3", org_id: "org-1", managed_by: null, name: "Airport Kiosk", created_at: "2025-03-10T00:00:00Z" },
+  ],
+  advertisers: [
+    { id: "adv-1", org_id: "org-1", user_id: "user-1", name: "PixelPerfect Ads", created_at: "2025-03-01T00:00:00Z" },
+    { id: "adv-2", org_id: "org-1", user_id: null, name: "BrightMedia Co.", created_at: "2025-03-15T00:00:00Z" },
+    { id: "adv-3", org_id: "org-1", user_id: null, name: "SignagePro", created_at: "2025-04-01T00:00:00Z" },
+  ],
+  ads: [
+    { id: "ad-1", advertiser_id: "adv-1", org_id: "org-1", name: "Summer Sale Banner", media_item_id: "media-1", status: "approved", created_at: "2025-03-10T00:00:00Z" },
+    { id: "ad-2", advertiser_id: "adv-1", org_id: "org-1", name: "Product Launch Video", media_item_id: "media-2", status: "approved", created_at: "2025-03-20T00:00:00Z" },
+    { id: "ad-3", advertiser_id: "adv-1", org_id: "org-1", name: "Holiday Promo", media_item_id: "media-4", status: "pending", created_at: "2025-04-01T00:00:00Z" },
+    { id: "ad-4", advertiser_id: "adv-2", org_id: "org-1", name: "New Menu Items", media_item_id: "media-8", status: "approved", created_at: "2025-03-25T00:00:00Z" },
+    { id: "ad-5", advertiser_id: "adv-3", org_id: "org-1", name: "Brand Awareness", media_item_id: "media-3", status: "rejected", created_at: "2025-04-05T00:00:00Z" },
+  ],
+  ad_franchise_targets: [
+    { ad_id: "ad-1", franchise_id: "franchise-1", status: "approved", reviewed_by: null, reviewed_at: null, created_at: "2025-03-12T00:00:00Z", franchises: { name: "Downtown Hub" } },
+    { ad_id: "ad-1", franchise_id: "franchise-2", status: "approved", reviewed_by: null, reviewed_at: null, created_at: "2025-03-12T00:00:00Z", franchises: { name: "Mall Location" } },
+    { ad_id: "ad-1", franchise_id: "franchise-3", status: "pending", reviewed_by: null, reviewed_at: null, created_at: "2025-03-12T00:00:00Z", franchises: { name: "Airport Kiosk" } },
+    { ad_id: "ad-2", franchise_id: "franchise-1", status: "approved", reviewed_by: null, reviewed_at: null, created_at: "2025-03-22T00:00:00Z", franchises: { name: "Downtown Hub" } },
+    { ad_id: "ad-2", franchise_id: "franchise-2", status: "pending", reviewed_by: null, reviewed_at: null, created_at: "2025-03-22T00:00:00Z", franchises: { name: "Mall Location" } },
+    { ad_id: "ad-3", franchise_id: "franchise-1", status: "pending", reviewed_by: null, reviewed_at: null, created_at: "2025-04-05T00:00:00Z", franchises: { name: "Downtown Hub" } },
+    { ad_id: "ad-3", franchise_id: "franchise-2", status: "pending", reviewed_by: null, reviewed_at: null, created_at: "2025-04-05T00:00:00Z", franchises: { name: "Mall Location" } },
+    { ad_id: "ad-3", franchise_id: "franchise-3", status: "pending", reviewed_by: null, reviewed_at: null, created_at: "2025-04-05T00:00:00Z", franchises: { name: "Airport Kiosk" } },
+    { ad_id: "ad-4", franchise_id: "franchise-1", status: "approved", reviewed_by: null, reviewed_at: null, created_at: "2025-03-28T00:00:00Z", franchises: { name: "Downtown Hub" } },
+    { ad_id: "ad-4", franchise_id: "franchise-2", status: "approved", reviewed_by: null, reviewed_at: null, created_at: "2025-03-28T00:00:00Z", franchises: { name: "Mall Location" } },
+    { ad_id: "ad-4", franchise_id: "franchise-3", status: "rejected", reviewed_by: null, reviewed_at: null, created_at: "2025-03-28T00:00:00Z", franchises: { name: "Airport Kiosk" } },
+    { ad_id: "ad-5", franchise_id: "franchise-1", status: "rejected", reviewed_by: null, reviewed_at: null, created_at: "2025-04-08T00:00:00Z", franchises: { name: "Downtown Hub" } },
+    { ad_id: "ad-5", franchise_id: "franchise-2", status: "rejected", reviewed_by: null, reviewed_at: null, created_at: "2025-04-08T00:00:00Z", franchises: { name: "Mall Location" } },
+  ],
+  screen_status_log: [
+    { id: "ssl-1", screen_id: "screen-1", status: "online", changed_at: "2025-06-01T08:00:00Z" },
+    { id: "ssl-2", screen_id: "screen-1", status: "offline", changed_at: "2025-06-05T14:30:00Z" },
+    { id: "ssl-3", screen_id: "screen-1", status: "online", changed_at: "2025-06-05T16:00:00Z" },
+    { id: "ssl-4", screen_id: "screen-2", status: "online", changed_at: "2025-06-01T08:00:00Z" },
+    { id: "ssl-5", screen_id: "screen-3", status: "online", changed_at: "2025-06-01T09:00:00Z" },
+    { id: "ssl-6", screen_id: "screen-3", status: "offline", changed_at: "2025-06-10T12:00:00Z" },
+    { id: "ssl-7", screen_id: "screen-3", status: "online", changed_at: "2025-06-10T14:00:00Z" },
+    { id: "ssl-8", screen_id: "screen-4", status: "offline", changed_at: "2025-06-01T00:00:00Z" },
+    { id: "ssl-9", screen_id: "screen-5", status: "online", changed_at: "2025-06-01T06:00:00Z" },
+    { id: "ssl-10", screen_id: "screen-5", status: "offline", changed_at: "2025-06-12T22:00:00Z" },
+    { id: "ssl-11", screen_id: "screen-5", status: "online", changed_at: "2025-06-13T06:00:00Z" },
+  ],
 };
 
 // Helper to deep clone data to avoid mutation

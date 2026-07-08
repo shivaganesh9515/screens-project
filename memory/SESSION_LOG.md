@@ -57,6 +57,30 @@
 
 ---
 
+## Session 4b — July 6, 2026
+
+**AI Model:** deepseek/deepseek-v4-flash (via Codebuff)  
+**Branch:** `abhinya`
+
+### What was done
+- **Implemented Task 4** (the only unblocked Abhinaya task):
+  - Fixed `screenPerformance` memo to group by `screen_id` (UUID) instead of `screens?.name`
+  - Changed uptime lookup from `screens.find(s => s.name === name)` to `screens.find(s => s.id === id)`
+  - Changed React `<Cell>` keys from `entry.name` to `entry.id` for proper DOM reconciliation
+- **Verified** TypeScript compiles cleanly (`tsc --noEmit` passes)
+- **Code-reviewed** — fix is clean and correct
+- **Updated** `PLAN-ABHINAYA.md` — Task 4 marked ✅ DONE
+
+### State at end of session
+- **Task 4** ✅ Complete — duplicate-named screens no longer merge their stats
+- **Tasks 1-3** still 🔴 Blocked (no `screen_status_log`, `franchises`, `advertisers`, `ads`, or `ad_id` in schema yet)
+
+### Next actions
+- Wait for Ashwanth to deliver schema foundation (franchises, advertisers, ads, screen_status_log tables)
+- Wait for Harshitha to deliver RBAC routing for advertiser dashboard
+
+---
+
 ## Session 3 — July 6, 2026
 
 **AI Model:** deepseek/deepseek-v4-flash (via Codebuff)  

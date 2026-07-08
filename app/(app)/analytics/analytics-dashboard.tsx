@@ -34,6 +34,10 @@ import {
   DownloadCloud,
   Table2,
   PieChart as PieChartIcon,
+  Wifi,
+  WifiOff,
+  Megaphone,
+  Activity,
 } from "lucide-react";
 import { StaggerWrapper } from "@/hooks/useStaggerAnimation";
 import { CountUp } from "@/hooks/useCountUp";
@@ -43,14 +47,19 @@ interface PlayLog {
   screen_id: string;
   media_item_id: string;
   playlist_id: string;
+  ad_id: string | null;
   started_at: string;
   ended_at: string | null;
   duration_ms: number | null;
   screens: { name: string } | null;
   media_items: { name: string; type: string } | null;
+  ads: { name: string } | null;
 }
 interface Screen { id: string; name: string; is_online: boolean; }
 interface MediaItem { id: string; name: string; type: string; }
+interface StatusLog { id: string; screen_id: string; status: "online" | "offline"; changed_at: string; }
+interface AdItem { id: string; name: string; status: string; advertiser_id: string | null; media_items?: { name: string; type: string } | null; }
+interface Advertiser { id: string; name: string; }
 
 const COLORS = {
   primary: "#4A7CF7",
@@ -67,14 +76,20 @@ export function AnalyticsDashboard({
   playLogs,
   screens,
   mediaItems,
+  statusLogs = [],
+  ads = [],
+  advertisers = [],
 }: {
   playLogs: PlayLog[];
   screens: Screen[];
   mediaItems: MediaItem[];
+  statusLogs?: StatusLog[];
+  ads?: AdItem[];
+  advertisers?: Advertiser[];
 }) {
   const [dateRange, setDateRange] = useState("30d");
   const [screenFilter, setScreenFilter] = useState("all");
-  const [chartView, setChartView] = useState<"overview" | "breakdown">("overview");
+  const [chartView, setChartView] = useState<"overview" | "breakdown" | "adPerformance">("overview");
 
   // Filter by date range
   const dateFiltered = useMemo(() => {
@@ -156,21 +171,167 @@ export function AnalyticsDashboard({
     }));
   }, [filtered]);
 
-  // Per-screen performance
-  const screenPerformance = useMemo(() => {
-    const map: Record<string, { plays: number; avgDuration: number; count: number }> = {};
-    for (const log of filtered) {
-      const name = log.screens?.name ?? "Unknown";
-      if (!map[name]) map[name] = { plays: 0, avgDuration: 0, count: 0 };
-      map[name].plays++;
-      map[name].avgDuration += log.duration_ms ?? 0;
-      map[name].count++;
+  // ---- Task 1: Uptime History ----
+  const uptimeHistory = useMemo(() => {
+    if (statusLogs.length === 0) return null;
+
+    // For each screen, compute online % from status logs
+    const screenUptime: Record<string, { id: string; name: string; onlineMs: number; totalMs: number }> = {};
+
+    // Group status logs by screen and compute timeline
+    const logsByScreen: Record<string, StatusLog[]> = {};
+    for (const log of statusLogs) {
+      if (!logsByScreen[log.screen_id]) logsByScreen[log.screen_id] = [];
+      logsByScreen[log.screen_id].push(log);
     }
-    return Object.entries(map).map(([name, data]) => ({
-      name,
+
+    // For each screen, and for each time segment between log entries, compute online vs offline time
+    const now = Date.now();
+    for (const [screenId, logs] of Object.entries(logsByScreen)) {
+      const screen = screens.find((s) => s.id === screenId);
+      const screenName = screen?.name ?? "Unknown";
+      if (!screenUptime[screenId]) {
+        screenUptime[screenId] = { id: screenId, name: screenName, onlineMs: 0, totalMs: 0 };
+      }
+
+      // Sort logs by changed_at ascending
+      const sorted = logs.sort((a, b) => new Date(a.changed_at).getTime() - new Date(b.changed_at).getTime());
+
+      // Walk through status changes and accumulate time
+      for (let i = 0; i < sorted.length; i++) {
+        const currentTime = new Date(sorted[i].changed_at).getTime();
+        const nextTime = i < sorted.length - 1 ? new Date(sorted[i + 1].changed_at).getTime() : now;
+        const duration = nextTime - currentTime;
+
+        if (sorted[i].status === "online") {
+          screenUptime[screenId].onlineMs += Math.max(0, duration);
+        }
+        screenUptime[screenId].totalMs += Math.max(0, duration);
+      }
+    }
+
+    // Build per-screen uptime % and overall daily trend
+    const perScreen = Object.values(screenUptime).map((s) => ({
+      id: s.id,
+      name: s.name,
+      uptimePct: s.totalMs > 0 ? Math.round((s.onlineMs / s.totalMs) * 100) : 0,
+    }));
+
+    // Overall daily uptime trend
+    const range = dateRange === "7d" ? 7 : dateRange === "30d" ? 30 : dateRange === "90d" ? 90 : 30;
+    if (range === Infinity) return { perScreen, dailyTrend: [] };
+
+    // Compute daily online/offline ratio
+    const daily: Record<string, { date: string; label: string; online: number; offline: number; total: number }> = {};
+    for (let d = range - 1; d >= 0; d--) {
+      const date = new Date(Date.now() - d * 86400000);
+      const key = date.toISOString().slice(0, 10);
+      daily[key] = {
+        date: key,
+        label: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        online: 0,
+        offline: 0,
+        total: 0,
+      };
+    }
+
+    // For each day, count how many screens were online (based on most recent status log before/on that day)
+    for (const screen of screens) {
+      const screenLogs = logsByScreen[screen.id] ?? [];
+      const sorted = screenLogs.sort((a, b) => new Date(a.changed_at).getTime() - new Date(b.changed_at).getTime());
+
+      for (const [dayKey, dayData] of Object.entries(daily)) {
+        const dayEnd = new Date(dayKey + "T23:59:59Z").getTime();
+        // Find most recent status log before end of this day
+        let latestStatus: "online" | "offline" | null = null;
+        for (const log of sorted) {
+          if (new Date(log.changed_at).getTime() <= dayEnd) {
+            latestStatus = log.status;
+          } else break;
+        }
+        if (latestStatus === "online") dayData.online++;
+        else if (latestStatus === "offline") dayData.offline++;
+        dayData.total++;
+      }
+    }
+
+    const dailyTrend = Object.values(daily).map((d) => ({
+      ...d,
+      uptimePct: d.total > 0 ? Math.round((d.online / d.total) * 100) : 0,
+    }));
+
+    return { perScreen, dailyTrend };
+  }, [statusLogs, screens, dateRange]);
+
+  // ---- Task 2: Ad Play Analytics ----
+  const adPlayData = useMemo(() => {
+    // Count plays per ad from play_logs
+    const adPlays: Record<string, { id: string; name: string; plays: number; totalDuration: number }> = {};
+    for (const log of filtered) {
+      if (!log.ad_id) continue;
+      const adName = log.ads?.name ?? "Unknown Ad";
+      if (!adPlays[log.ad_id]) {
+        adPlays[log.ad_id] = { id: log.ad_id, name: adName, plays: 0, totalDuration: 0 };
+      }
+      adPlays[log.ad_id].plays++;
+      adPlays[log.ad_id].totalDuration += log.duration_ms ?? 0;
+    }
+
+    const topAds = Object.values(adPlays)
+      .sort((a, b) => b.plays - a.plays)
+      .slice(0, 10);
+
+    // Per-advertiser breakdown (grouped by advertiser ID, not name)
+    const advertiserAdIds: Record<string, string[]> = {};
+    const advertiserNames: Record<string, string> = {};
+    // Build name lookup from the advertisers prop
+    for (const adv of advertisers) {
+      advertiserNames[adv.id] = adv.name;
+    }
+    for (const ad of ads) {
+      if (!ad.advertiser_id) continue;
+      const advName = advertiserNames[ad.advertiser_id] ?? "Unknown";
+      if (!advertiserAdIds[ad.advertiser_id]) advertiserAdIds[ad.advertiser_id] = [];
+      advertiserAdIds[ad.advertiser_id].push(ad.id);
+    }
+
+    const advertiserBreakdown = Object.entries(advertiserAdIds).map(([advId, adIds]) => {
+      let plays = 0;
+      let duration = 0;
+      for (const aid of adIds) {
+        const data = adPlays[aid];
+        if (data) {
+          plays += data.plays;
+          duration += data.totalDuration;
+        }
+      }
+      return { name: advertiserNames[advId] ?? "Unknown", plays, totalDuration: duration };
+    }).filter(a => a.plays > 0).sort((a, b) => b.plays - a.plays);
+
+    const totalAdPlays = Object.values(adPlays).reduce((sum, a) => sum + a.plays, 0);
+
+    return { topAds, advertiserBreakdown, totalAdPlays };
+  }, [filtered, ads]);
+
+  // Per-screen performance (grouped by screen ID, not name — prevents duplicate-name merge bug)
+  const screenPerformance = useMemo(() => {
+    const map: Record<string, { id: string; name: string; plays: number; avgDuration: number; count: number }> = {};
+    for (const log of filtered) {
+      const screenId = log.screen_id;
+      const screenName = log.screens?.name ?? "Unknown";
+      if (!map[screenId]) map[screenId] = { id: screenId, name: screenName, plays: 0, avgDuration: 0, count: 0 };
+      map[screenId].plays++;
+      map[screenId].avgDuration += log.duration_ms ?? 0;
+      map[screenId].count++;
+      // Keep name in sync (handles case where screen name changes between plays)
+      map[screenId].name = screenName;
+    }
+    return Object.entries(map).map(([id, data]) => ({
+      id,
+      name: data.name,
       plays: data.plays,
       avgDuration: data.count > 0 ? Math.round(data.avgDuration / data.count / 1000) : 0,
-      uptime: screens.find((s) => s.name === name)?.is_online ? true : false,
+      uptime: screens.find((s) => s.id === id)?.is_online ?? false,
     }));
   }, [filtered, screens]);
 
@@ -317,6 +478,17 @@ export function AnalyticsDashboard({
             >
               <PieChartIcon className="mr-1 inline h-3 w-3" />
               Breakdown
+            </button>
+            <button
+              onClick={() => setChartView("adPerformance")}
+              className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-all ${
+                chartView === "adPerformance"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Megaphone className="mr-1 inline h-3 w-3" />
+              Ad Performance
             </button>
           </div>
           <Button
@@ -537,7 +709,7 @@ export function AnalyticsDashboard({
                     <Bar dataKey="plays" radius={[4, 4, 0, 0]} barSize={28}>
                       {screenPerformance.map((entry) => (
                         <Cell
-                          key={entry.name}
+                          key={entry.id}
                           fill={entry.uptime ? COLORS.success : COLORS.destructive}
                           fillOpacity={entry.uptime ? 0.85 : 0.6}
                         />
@@ -553,8 +725,125 @@ export function AnalyticsDashboard({
               </div>
             </div>
           </div>
+
+          {/* ---- Task 1: Screen Uptime History ---- */}
+          {uptimeHistory && (
+            <div className="rounded-2xl bg-card p-5 shadow-card">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="rounded-lg bg-emerald-50 p-1.5">
+                    <Activity className="h-4 w-4 text-success" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-card-foreground">Screen Uptime History</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Historical online/offline percentage per screen
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="grid gap-6 lg:grid-cols-2">
+                {/* Per-screen uptime % */}
+                <div>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={uptimeHistory.perScreen}
+                        layout="vertical"
+                        margin={{ top: 0, right: 20, left: -10, bottom: 0 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#ECEFF4" horizontal={false} />
+                        <XAxis
+                          type="number"
+                          domain={[0, 100]}
+                          tick={{ fontSize: 11, fill: "#64748b" }}
+                          tickLine={false}
+                          axisLine={false}
+                          tickFormatter={(v) => `${v}%`}
+                        />
+                        <YAxis
+                          type="category"
+                          dataKey="name"
+                          tick={{ fontSize: 11, fill: "#64748b" }}
+                          tickLine={false}
+                          axisLine={false}
+                          width={130}
+                        />
+                        <RechartsTooltip
+                          contentStyle={{
+                            borderRadius: "10px",
+                            border: "1px solid #ECEFF4",
+                            boxShadow: "0 4px 12px rgba(16,26,46,0.06)",
+                            fontSize: "13px",
+                          }}
+                          formatter={(value) => [`${value}%`, 'Uptime']}
+                        />
+                        <Bar dataKey="uptimePct" radius={[0, 4, 4, 0]} barSize={20}>
+                          {uptimeHistory.perScreen.map((entry: any) => (
+                            <Cell
+                              key={entry.id}
+                              fill={entry.uptimePct >= 95 ? COLORS.success : entry.uptimePct >= 80 ? COLORS.warning : COLORS.destructive}
+                              fillOpacity={0.85}
+                            />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Daily uptime trend */}
+                <div>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={uptimeHistory.dailyTrend} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                        <defs>
+                          <linearGradient id="uptimeGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={COLORS.success} stopOpacity={0.25} />
+                            <stop offset="95%" stopColor={COLORS.success} stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#ECEFF4" vertical={false} />
+                        <XAxis
+                          dataKey="label"
+                          tick={{ fontSize: 11, fill: "#64748b" }}
+                          tickLine={false}
+                          axisLine={false}
+                          interval={dateRange === "7d" ? 0 : 3}
+                        />
+                        <YAxis
+                          domain={[0, 100]}
+                          tick={{ fontSize: 11, fill: "#64748b" }}
+                          tickLine={false}
+                          axisLine={false}
+                          tickFormatter={(v) => `${v}%`}
+                        />
+                        <RechartsTooltip
+                          contentStyle={{
+                            borderRadius: "10px",
+                            border: "1px solid #ECEFF4",
+                            boxShadow: "0 4px 12px rgba(16,26,46,0.06)",
+                            fontSize: "13px",
+                          }}
+                          formatter={(value: any) => [`${value}%`, 'Avg Uptime']}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="uptimePct"
+                          stroke={COLORS.success}
+                          strokeWidth={2.5}
+                          fill="url(#uptimeGradient)"
+                          animationDuration={500}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </>
-      ) : (
+      ) : chartView === "breakdown" ? (
         <>
           {/* Breakdown View */}
           <div className="grid gap-6 lg:grid-cols-2">
@@ -653,6 +942,122 @@ export function AnalyticsDashboard({
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          {/* ---- Task 2: Ad Performance Analytics ---- */}
+          {/* Ad KPI cards */}
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="group rounded-2xl bg-card p-5 shadow-card transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5">
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Total Ad Plays</p>
+                  <p className="text-2xl font-bold tracking-tight text-card-foreground">
+                    {adPlayData.totalAdPlays.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {filtered.length > 0 ? Math.round((adPlayData.totalAdPlays / filtered.length) * 100) : 0}% of all plays
+                  </p>
+                </div>
+                <div className="rounded-xl bg-rose-50 p-3 transition-transform duration-200 group-hover:scale-110">
+                  <Megaphone className="h-5 w-5 text-rose-500" />
+                </div>
+              </div>
+            </div>
+            <div className="group rounded-2xl bg-card p-5 shadow-card transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5">
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Active Ads</p>
+                  <p className="text-2xl font-bold tracking-tight text-card-foreground">
+                    {ads.length}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {ads.filter(a => a.status === 'approved').length} approved
+                  </p>
+                </div>
+                <div className="rounded-xl bg-blue-50 p-3 transition-transform duration-200 group-hover:scale-110">
+                  <Play className="h-5 w-5 text-primary" />
+                </div>
+              </div>
+            </div>
+            <div className="group rounded-2xl bg-card p-5 shadow-card transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5">
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Advertisers</p>
+                  <p className="text-2xl font-bold tracking-tight text-card-foreground">
+                    {advertisers.length}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {adPlayData.advertiserBreakdown.length} with plays
+                  </p>
+                </div>
+                <div className="rounded-xl bg-purple-50 p-3 transition-transform duration-200 group-hover:scale-110">
+                  <BarChart3 className="h-5 w-5 text-purple-500" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Top Ads by Play Count */}
+            <div className="rounded-2xl bg-card p-5 shadow-card">
+              <h3 className="mb-4 font-semibold text-card-foreground">Top Ads by Play Count</h3>
+              {adPlayData.topAds.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <Megaphone className="mb-3 h-10 w-10 text-muted-foreground/30" />
+                  <p className="text-sm text-muted-foreground">No ad plays recorded yet</p>
+                  <p className="text-xs text-muted-foreground/60 mt-1">
+                    Ad plays will appear once ads are linked to play logs
+                  </p>
+                </div>
+              ) : (
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={adPlayData.topAds} layout="vertical" margin={{ top: 0, right: 0, left: -10, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#ECEFF4" horizontal={false} />
+                      <XAxis type="number" tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={false} allowDecimals={false} />
+                      <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={false} width={140} />
+                      <RechartsTooltip contentStyle={{ borderRadius: "10px", border: "1px solid #ECEFF4", boxShadow: "0 4px 12px rgba(16,26,46,0.06)", fontSize: "13px" }} formatter={(value) => [typeof value === 'number' ? value.toLocaleString() : String(value ?? ''), 'Plays']} />
+                      <Bar dataKey="plays" radius={[0, 4, 4, 0]} barSize={18}>
+                        {adPlayData.topAds.map((entry, i) => (
+                          <Cell key={entry.id} fill={i === 0 ? COLORS.pink : i === 1 ? COLORS.purple : i === 2 ? COLORS.primary : COLORS.teal} fillOpacity={0.85} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+
+            {/* Advertiser Breakdown */}
+            <div className="rounded-2xl bg-card p-5 shadow-card">
+              <h3 className="mb-4 font-semibold text-card-foreground">Plays by Advertiser</h3>
+              {adPlayData.advertiserBreakdown.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <BarChart3 className="mb-3 h-10 w-10 text-muted-foreground/30" />
+                  <p className="text-sm text-muted-foreground">No advertiser play data</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {adPlayData.advertiserBreakdown.map((adv) => {
+                    const maxPlays = adPlayData.advertiserBreakdown[0].plays;
+                    const pct = maxPlays > 0 ? Math.round((adv.plays / maxPlays) * 100) : 0;
+                    return (
+                      <div key={adv.name} className="group">
+                        <div className="mb-1.5 flex items-center justify-between">
+                          <span className="text-sm font-medium text-card-foreground">{adv.name}</span>
+                          <span className="text-xs text-muted-foreground">{adv.plays.toLocaleString()} plays</span>
+                        </div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                          <div className="h-full rounded-full transition-all duration-500 group-hover:opacity-80" style={{ width: `${pct}%`, backgroundColor: COLORS.pink }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </>

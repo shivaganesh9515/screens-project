@@ -41,10 +41,11 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/auth");
 
   const isPlayerPage = request.nextUrl.pathname.startsWith("/player");
+  const isAdvertiserPage = request.nextUrl.pathname.startsWith("/advertiser");
   const isApiRoute = request.nextUrl.pathname.startsWith("/api");
 
-  // API routes and player pages are handled differently
-  if (isApiRoute || isPlayerPage) {
+  // API routes, player pages, and advertiser pages are handled differently
+  if (isApiRoute || isPlayerPage || isAdvertiserPage) {
     return supabaseResponse;
   }
 
