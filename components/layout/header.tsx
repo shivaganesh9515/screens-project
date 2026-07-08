@@ -23,6 +23,7 @@ export function Header() {
   const [userEmail, setUserEmail] = useState<string>("");
   const [displayName, setDisplayName] = useState<string>("");
   const [orgName, setOrgName] = useState<string>("");
+  const [userRole, setUserRole] = useState<string>("");
 
   useEffect(() => {
     const getUser = async () => {
@@ -34,12 +35,15 @@ export function Header() {
         setDisplayName(name.charAt(0).toUpperCase() + name.slice(1));
         const { data: members } = await supabase
           .from("org_members")
-          .select("orgs!inner(name)")
+          .select("orgs!inner(name), role")
           .eq("user_id", user.id)
           .single();
         if (members?.orgs) {
           const org = members.orgs as unknown as { name: string };
           setOrgName(org.name);
+        }
+        if (members?.role) {
+          setUserRole(members.role);
         }
       }
     };
@@ -110,7 +114,7 @@ export function Header() {
                 {displayName || "User"}
               </p>
               <span className="inline-block text-[11px] text-[#6B7394] bg-[#F0F3FA] rounded-full px-2 py-0.5 leading-tight mt-0.5">
-                Admin
+                {userRole ? userRole.charAt(0).toUpperCase() + userRole.slice(1).replace(/_/g, " ") : "User"}
               </span>
             </div>
           </DropdownMenuTrigger>

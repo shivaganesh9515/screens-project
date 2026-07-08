@@ -31,7 +31,6 @@ export interface Screen {
   unique_number: string | null;
   orientation: string | null;
   size_type: string | null;
-  screen_type: string | null;
   connectivity_type: string | null;
   lat: number | null;
   lng: number | null;
@@ -42,8 +41,24 @@ export interface Screen {
   is_online: boolean;
   resolution: string | null;
   tags: string[] | null;
+  latitude: number | null;
+  longitude: number | null;
+  screen_type: "static" | "bus" | "auto" | null;
   created_at: string;
   screen_groups?: { name: string } | null;
+}
+
+export interface ScreenWithLocation extends Screen {
+  current_latitude?: number | null;
+  current_longitude?: number | null;
+}
+
+export interface ScreenLocation {
+  id: string;
+  screen_id: string;
+  latitude: number;
+  longitude: number;
+  recorded_at: string;
 }
 
 export interface MediaItem {
