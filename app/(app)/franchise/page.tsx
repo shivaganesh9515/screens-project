@@ -21,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ApprovalActions } from "./approval-actions";
 
 export default async function FranchisePage() {
   const supabase = await createClient();
@@ -232,67 +233,16 @@ export default async function FranchisePage() {
           </div>
         </SectionCard>
 
-        {/* Pending Approvals */}
+        {/* Pending Approvals with Approve/Reject Actions */}
         <SectionCard
           title="Pending Approvals"
           subtitle="Ads awaiting your review"
         >
-          <div className="max-h-[400px] overflow-y-auto">
-            {(pendingAds ?? []).length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Megaphone className="mb-3 h-10 w-10 text-muted-foreground/30" />
-                <p className="text-sm font-medium text-muted-foreground">
-                  No pending approvals.
-                </p>
-                <p className="text-xs text-muted-foreground/60">
-                  Ads targeting your franchise will appear here
-                </p>
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-border bg-card shadow-card overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/30 hover:bg-muted/30">
-                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Advertisement
-                      </TableHead>
-                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Advertiser
-                      </TableHead>
-                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Submitted
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {(pendingAds ?? []).map((target: any) => {
-                      const ad = target.ads;
-                      const advertiserName = ad?.advertisers?.name ?? "—";
-                      return (
-                        <TableRow
-                          key={target.id}
-                          className="group hover:bg-muted/30 transition-colors"
-                        >
-                          <TableCell>
-                            <span className="font-medium text-foreground">
-                              {ad?.name ?? "—"}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {advertiserName}
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {ad?.created_at
-                              ? new Date(ad.created_at).toLocaleDateString()
-                              : "—"}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+          <div className="max-h-[450px] overflow-y-auto">
+            <ApprovalActions
+              pendingAds={pendingAds ?? []}
+              franchiseId={franchiseId ?? ""}
+            />
           </div>
         </SectionCard>
       </div>

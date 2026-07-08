@@ -45,6 +45,7 @@ export default function PlayerPage({ params }: { params: Promise<{ token: string
   const [playlistId, setPlaylistId] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
   const [activePlaylistId, setActivePlaylistId] = useState<string | null>(null);
+  const [screenType, setScreenType] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const wakeLockRef = useRef<any>(null);
@@ -55,14 +56,18 @@ export default function PlayerPage({ params }: { params: Promise<{ token: string
   const fetchInterval = useRef<NodeJS.Timeout | null>(null);
   const playlistRef = useRef<PlaylistItemData[]>([]);
   const playStartTimeRef = useRef<string>("");
+  const gpsWatchIdRef = useRef<number | null>(null);
+  const gpsPositionRef = useRef<{ latitude: number; longitude: number } | null>(null);
 
   useEffect(() => { playlistRef.current = playlist; }, [playlist]);
 
   // Restore paired state
   useEffect(() => {
-    const stored = localStorage.getItem("screen_id");
-    if (stored) {
-      setScreenId(stored);
+    const storedId = localStorage.getItem("screen_id");
+    const storedType = localStorage.getItem("screen_type");
+    if (storedId) {
+      setScreenId(storedId);
+      if (storedType) setScreenType(storedType);
       setPaired(true);
     }
   }, []);
@@ -116,8 +121,11 @@ export default function PlayerPage({ params }: { params: Promise<{ token: string
       }
       const data = await res.json();
       const sid = data.screen.id;
+      const stype = data.screen.screen_type;
       localStorage.setItem("screen_id", sid);
+      if (stype) localStorage.setItem("screen_type", stype);
       setScreenId(sid);
+      setScreenType(stype);
       setPaired(true);
     } catch {
       setPairError("Connection failed");
@@ -186,14 +194,23 @@ export default function PlayerPage({ params }: { params: Promise<{ token: string
     });
   }, [screenId, playlistId]);
 
-  // Heartbeat + flush play logs
+  // Heartbeat + flush play logs + send GPS
   const sendHeartbeat = useCallback(async () => {
     if (!screenId) return;
+    const payload: Record<string, any> = { screen_id: screenId };
+
+    // Include GPS position if available (bus/auto screens)
+    const gpsPos = gpsPositionRef.current;
+    if (gpsPos) {
+      payload.latitude = gpsPos.latitude;
+      payload.longitude = gpsPos.longitude;
+    }
+
     try {
       const res = await fetch("/api/screens/heartbeat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ screen_id: screenId }),
+        body: JSON.stringify(payload),
       });
       setOffline(!res.ok);
       if (playLogBuffer.current.length > 0) {
@@ -206,6 +223,47 @@ export default function PlayerPage({ params }: { params: Promise<{ token: string
       }
     } catch { setOffline(true); }
   }, [screenId]);
+
+  // Start GPS tracking for bus/auto screens
+  useEffect(() => {
+    if (!paired || !screenId || !screenType) return;
+
+    // Only track GPS for mobile screens (bus / auto)
+    const isMobile = screenType === "bus" || screenType === "auto";
+    if (!isMobile) return;
+
+    // Check if geolocation is available
+    if (!("geolocation" in navigator)) {
+      console.log("[Player] Geolocation not available — skipping GPS");
+      return;
+    }
+
+    // Start watching position
+    gpsWatchIdRef.current = navigator.geolocation.watchPosition(
+      (position) => {
+        gpsPositionRef.current = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
+      },
+      (error) => {
+        console.warn("[Player] GPS error:", error.message);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 30000,
+      }
+    );
+
+    return () => {
+      if (gpsWatchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(gpsWatchIdRef.current);
+        gpsWatchIdRef.current = null;
+      }
+      gpsPositionRef.current = null;
+    };
+  }, [paired, screenId, screenType]);
 
   useEffect(() => {
     if (!paired || !screenId) return;
