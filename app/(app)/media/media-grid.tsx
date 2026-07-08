@@ -35,8 +35,15 @@ export function MediaGrid({ mediaItems, folders, orgId }: { mediaItems: MediaIte
     return matchesSearch && matchesType && matchesFolder && matchesOrientation;
   });
 
-  const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("media_items").delete().eq("id", id);
+  const handleDelete = async (item: MediaItem) => {
+    const toDelete: string[] = [];
+    if (item.storage_path) toDelete.push(item.storage_path);
+    if (item.thumbnail_path) toDelete.push(item.thumbnail_path);
+    if (toDelete.length > 0) {
+      const { error: storageError } = await supabase.storage.from("media").remove(toDelete);
+      if (storageError) console.warn("Storage delete warning:", storageError.message);
+    }
+    const { error } = await supabase.from("media_items").delete().eq("id", item.id);
     if (error) toast.error("Failed to delete");
     else { toast.success("Deleted"); router.refresh(); }
   };
@@ -102,7 +109,7 @@ export function MediaGrid({ mediaItems, folders, orgId }: { mediaItems: MediaIte
                     <div className="flex h-full items-center justify-center"><Video className="h-8 w-8 text-muted-foreground/40" /></div>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <Button variant="destructive" size="icon" className="absolute right-2 top-2 h-8 w-8 rounded-xl opacity-0 group-hover:opacity-100 transition-all" onClick={() => handleDelete(item.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                  <Button variant="destructive" size="icon" className="absolute right-2 top-2 h-8 w-8 rounded-xl opacity-0 group-hover:opacity-100 transition-all" onClick={() => handleDelete(item)}><Trash2 className="h-3.5 w-3.5" /></Button>
                   {item.type === "video" && item.source_type === "link" && (
                     <span className="absolute bottom-2 left-2 bg-blue-600/80 backdrop-blur-sm text-white text-xs border-0 rounded-lg px-2 py-0.5 flex items-center gap-1"><Video className="h-3 w-3" />Live</span>
                   )}
@@ -138,7 +145,7 @@ export function MediaGrid({ mediaItems, folders, orgId }: { mediaItems: MediaIte
                   <td className="px-5 py-3.5 text-sm text-muted-foreground">{item.orientation ? (item.orientation.charAt(0).toUpperCase() + item.orientation.slice(1)) : "—"}</td>
                   <td className="px-5 py-3.5 text-sm text-muted-foreground">{item.source_type === "link" ? <Badge variant="secondary" className="rounded-lg gap-1"><Video className="h-3 w-3" />Live</Badge> : "Upload"}</td>
                   <td className="px-5 py-3.5 text-sm text-muted-foreground">{item.folder ?? "—"}</td>
-                  <td className="px-5 py-3.5"><Button variant="ghost" size="sm" onClick={() => handleDelete(item.id)} className="h-8 w-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button></td>
+                  <td className="px-5 py-3.5"><Button variant="ghost" size="sm" onClick={() => handleDelete(item)} className="h-8 w-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button></td>
                 </tr>
               ))}
             </tbody>

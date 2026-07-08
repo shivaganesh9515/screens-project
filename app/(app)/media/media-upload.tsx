@@ -17,11 +17,14 @@ export function MediaUpload({ orgId }: { orgId: string }) {
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState<Record<string, number>>({});
+  const [mode, setMode] = useState<"file" | "link">("file");
   const [folder, setFolder] = useState("");
   const [tagsInput, setTagsInput] = useState("");
   const [orientation, setOrientation] = useState<"landscape" | "portrait">("landscape");
   const [uploadMode, setUploadMode] = useState<"file" | "link">("file");
   const [liveUrl, setLiveUrl] = useState("");
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkName, setLinkName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const supabase = createClient();
@@ -73,17 +76,26 @@ export function MediaUpload({ orgId }: { orgId: string }) {
       const fileExt = file.name.split(".").pop();
       const filePath = `${orgId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
       const type = file.type.startsWith("video") ? "video" : "image";
+      let orientation: string | null = null;
       let thumbnailPath: string | null = null;
       if (type === "video") {
         try {
           const video = document.createElement("video"); video.src = URL.createObjectURL(file);
           await new Promise((resolve) => { video.onloadeddata = () => { video.currentTime = 0; setTimeout(resolve, 200); }; });
+          orientation = video.videoWidth >= video.videoHeight ? "landscape" : "portrait";
           const canvas = document.createElement("canvas"); canvas.width = video.videoWidth; canvas.height = video.videoHeight;
           canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
           const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), "image/webp", 80));
           const thumbPath = `${orgId}/thumb_${Date.now()}.webp`;
           const { error: thumbError } = await supabase.storage.from("media").upload(thumbPath, blob, { contentType: "image/webp" });
           if (!thumbError) thumbnailPath = thumbPath; URL.revokeObjectURL(video.src);
+        } catch {}
+      } else {
+        try {
+          const img = new Image(); img.src = URL.createObjectURL(file);
+          await new Promise((resolve) => { img.onload = resolve; });
+          orientation = img.naturalWidth >= img.naturalHeight ? "landscape" : "portrait";
+          URL.revokeObjectURL(img.src);
         } catch {}
       }
       const { error: uploadError } = await supabase.storage.from("media").upload(filePath, file, { cacheControl: "3600" });
@@ -101,6 +113,25 @@ export function MediaUpload({ orgId }: { orgId: string }) {
       else setProgress((prev) => ({ ...prev, [file.name]: 100 }));
     }
     setUploading(false); toast.success(`${files.length} file(s) uploaded`); setFiles([]); setFolder(""); setTagsInput(""); setOrientation("landscape"); setUploadMode("file"); setOpen(false); router.refresh();
+  };
+
+  const handleAddLink = async () => {
+    if (!linkUrl.trim()) { toast.error("Please enter a video URL"); return; }
+    if (!linkName.trim()) { toast.error("Please enter a name"); return; }
+    setUploading(true);
+    const { error } = await supabase.from("media_items").insert({
+      org_id: orgId,
+      name: linkName.trim(),
+      type: "video",
+      source_type: "link",
+      external_url: linkUrl.trim(),
+      folder: folder || null,
+      tags: tagsInput.split(",").map((t) => t.trim()).filter(Boolean).length > 0
+        ? tagsInput.split(",").map((t) => t.trim()).filter(Boolean)
+        : null,
+    });
+    if (error) { toast.error("Failed to add link"); setUploading(false); return; }
+    toast.success("Live video link added"); setLinkUrl(""); setLinkName(""); setFolder(""); setTagsInput(""); setOpen(false); setUploading(false); router.refresh();
   };
 
   return (
@@ -196,14 +227,24 @@ export function MediaUpload({ orgId }: { orgId: string }) {
         {(files.length > 0 || uploadMode === "link") && (
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label htmlFor="folder" className="text-sm font-medium">Folder</Label>
-              <Input id="folder" placeholder="e.g. marketing, lobby" value={folder} onChange={(e) => setFolder(e.target.value)} className="h-10 rounded-xl border-border" />
+              <Label htmlFor="linkName" className="text-sm font-medium">Name</Label>
+              <Input id="linkName" placeholder="e.g. Beach Cam - Live" value={linkName} onChange={(e) => setLinkName(e.target.value)} className="h-10 rounded-xl border-border" />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="tags" className="text-sm font-medium">Tags</Label>
-              <Input id="tags" placeholder="e.g. marketing, lobby, promo" value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} className="h-10 rounded-xl border-border" />
+              <Label htmlFor="linkUrl" className="text-sm font-medium">Video URL</Label>
+              <Input id="linkUrl" placeholder="https://example.com/live-stream.m3u8" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} className="h-10 rounded-xl border-border" />
+              <p className="text-xs text-muted-foreground">Paste a direct link to a live video stream (HLS, RTMP, etc.)</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="folderLink" className="text-sm font-medium">Folder</Label>
+              <Input id="folderLink" placeholder="e.g. marketing, lobby" value={folder} onChange={(e) => setFolder(e.target.value)} className="h-10 rounded-xl border-border" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="tagsLink" className="text-sm font-medium">Tags</Label>
+              <Input id="tagsLink" placeholder="e.g. live, promo" value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} className="h-10 rounded-xl border-border" />
               <p className="text-xs text-muted-foreground">Comma-separated values</p>
             </div>
+            <Button onClick={handleAddLink} disabled={uploading} className="w-full rounded-full gap-2">{uploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Adding...</> : <><Link className="h-4 w-4" /> Add Live Video</>}</Button>
           </div>
         )}
 
