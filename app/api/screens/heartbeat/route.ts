@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
-    const { screen_id } = await request.json();
+    const body = await request.json();
+    const { screen_id, latitude, longitude } = body;
 
     if (!screen_id) {
       return NextResponse.json({ error: "screen_id is required" }, { status: 400 });
@@ -39,6 +40,22 @@ export async function POST(request: Request) {
 
     if (error) {
       return NextResponse.json({ error: "Failed to update heartbeat" }, { status: 500 });
+    }
+
+    // If GPS coordinates are provided, log to screen_locations
+    if (latitude != null && longitude != null) {
+      const { error: locError } = await supabase
+        .from("screen_locations")
+        .insert({
+          screen_id,
+          latitude,
+          longitude,
+          recorded_at: now,
+        });
+
+      if (locError) {
+        console.error("[Heartbeat] Failed to log GPS location:", locError);
+      }
     }
 
     return NextResponse.json({ ok: true, last_seen: now });

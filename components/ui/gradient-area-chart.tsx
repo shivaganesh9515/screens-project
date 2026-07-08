@@ -48,7 +48,7 @@ function GradientAreaChart({
   } satisfies ChartConfig
 
   return (
-    <div className={cn("w-full", className)} style={{ height }}>
+    <div className={cn("w-full overflow-hidden", className)} style={{ height }}>
       <ChartContainer config={chartConfig}>
         <AreaChart data={data} margin={{ left: 0, right: 0, top: 8, bottom: 0 }}>
           <defs>

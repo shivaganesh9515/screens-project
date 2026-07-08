@@ -4,7 +4,7 @@ import { Building2, Monitor, Megaphone, Clock } from "lucide-react";
 import { StatCard } from "@/components/ui/stat-card";
 import { SectionCard } from "@/components/ui/section-card";
 import { StaggerWrapper } from "@/hooks/useStaggerAnimation";
-import { CountUp } from "@/hooks/useCountUp";
+import { CountUp } from "@/components/ui/count-up";
 import { PendingApprovalsTable } from "./pending-approvals-table";
 import { RecentActivityFeed } from "./recent-activity-feed";
 
