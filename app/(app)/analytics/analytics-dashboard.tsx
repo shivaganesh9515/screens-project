@@ -569,7 +569,7 @@ export function AnalyticsDashboard({
                 </div>
               </div>
             </div>
-            <div className="h-72">
+            <div className="h-72 overflow-hidden">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={dailyTrend} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                   <defs>
@@ -625,7 +625,7 @@ export function AnalyticsDashboard({
               <h3 className="mb-4 font-semibold text-card-foreground">
                 Top Media by Impressions
               </h3>
-              <div className="h-72">
+              <div className="h-72 overflow-hidden">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={mediaBreakdown.slice(0, 10)}
@@ -676,7 +676,7 @@ export function AnalyticsDashboard({
               <h3 className="mb-4 font-semibold text-card-foreground">
                 Screen Performance
               </h3>
-              <div className="h-72">
+              <div className="h-72 overflow-hidden">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={screenPerformance}
@@ -745,7 +745,7 @@ export function AnalyticsDashboard({
               <div className="grid gap-6 lg:grid-cols-2">
                 {/* Per-screen uptime % */}
                 <div>
-                  <div className="h-64">
+                  <div className="h-64 overflow-hidden">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={uptimeHistory.perScreen}
@@ -794,7 +794,7 @@ export function AnalyticsDashboard({
 
                 {/* Daily uptime trend */}
                 <div>
-                  <div className="h-64">
+                  <div className="h-64 overflow-hidden">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={uptimeHistory.dailyTrend} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                         <defs>
@@ -900,7 +900,7 @@ export function AnalyticsDashboard({
               <h3 className="mb-4 font-semibold text-card-foreground">
                 Daily Play Time (seconds)
               </h3>
-              <div className="h-52">
+              <div className="h-52 overflow-hidden">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={dailyTrend} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                     <defs>
@@ -1013,7 +1013,7 @@ export function AnalyticsDashboard({
                   </p>
                 </div>
               ) : (
-                <div className="h-72">
+                <div className="h-72 overflow-hidden">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={adPlayData.topAds} layout="vertical" margin={{ top: 0, right: 0, left: -10, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#ECEFF4" horizontal={false} />

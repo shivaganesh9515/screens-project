@@ -16,6 +16,7 @@ import {
   HardDrive,
   Menu,
   X,
+  Megaphone,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -26,6 +27,7 @@ const menuItems = [
   { href: "/playlists", label: "Playlists", icon: Play },
   { href: "/templates", label: "Templates", icon: Layout },
   { href: "/schedule", label: "Schedule", icon: Calendar },
+  { href: "/advertiser", label: "Advertiser", icon: Megaphone },
 ];
 
 const systemItems = [

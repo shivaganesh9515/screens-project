@@ -23,7 +23,7 @@ function SectionCard({
     <div
       data-slot="section-card"
       className={cn(
-        "rounded-[var(--radius)] bg-card shadow-card",
+        "rounded-[var(--radius)] bg-card shadow-card overflow-hidden",
         size === "sm" ? "p-4" : "p-6",
         className,
       )}
