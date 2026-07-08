@@ -1,12 +1,12 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Building2, Monitor, Megaphone, Clock, Users } from "lucide-react";
+import { Building2, Monitor, Megaphone, Clock } from "lucide-react";
 import { StatCard } from "@/components/ui/stat-card";
 import { SectionCard } from "@/components/ui/section-card";
-import { EmptyState } from "@/components/ui/empty-state";
 import { StaggerWrapper } from "@/hooks/useStaggerAnimation";
 import { CountUp } from "@/hooks/useCountUp";
 import { PendingApprovalsTable } from "./pending-approvals-table";
+import { RecentActivityFeed } from "./recent-activity-feed";
 
 export default async function AdminPage() {
   const supabase = await createClient();
@@ -30,6 +30,10 @@ export default async function AdminPage() {
     { count: totalAdvertisers },
     { count: pendingApprovalsCount },
     { data: pendingAds },
+    { data: recentFranchises },
+    { data: recentAdvertisers },
+    { data: recentScreens },
+    { data: recentAds },
   ] = await Promise.all([
     supabase.from("franchises").select("*", { count: "exact", head: true }).eq("org_id", orgId),
     supabase.from("screens").select("*", { count: "exact", head: true }).eq("org_id", orgId),
@@ -49,6 +53,30 @@ export default async function AdminPage() {
       .eq("org_id", orgId)
       .eq("status", "pending")
       .order("created_at", { ascending: false }),
+    supabase
+      .from("franchises")
+      .select("id, name, created_at")
+      .eq("org_id", orgId)
+      .order("created_at", { ascending: false })
+      .limit(10),
+    supabase
+      .from("advertisers")
+      .select("id, name, created_at")
+      .eq("org_id", orgId)
+      .order("created_at", { ascending: false })
+      .limit(10),
+    supabase
+      .from("screens")
+      .select("id, name, created_at")
+      .eq("org_id", orgId)
+      .order("created_at", { ascending: false })
+      .limit(10),
+    supabase
+      .from("ads")
+      .select("id, name, created_at")
+      .eq("org_id", orgId)
+      .order("created_at", { ascending: false })
+      .limit(10),
   ]);
 
   const stats = [
@@ -78,11 +106,47 @@ export default async function AdminPage() {
     },
   ];
 
-  const recentActivity = [
-    { id: "1", franchise: "Downtown Location", action: "Added 3 new screens", time: "2 hours ago" },
-    { id: "2", franchise: "Airport Terminal", action: "Updated ad campaign", time: "5 hours ago" },
-    { id: "3", franchise: "Shopping Mall", action: "Approved ad targeting", time: "1 day ago" },
-  ];
+  // Build unified activity feed
+  type ActivityItem = {
+    id: string;
+    type: "franchise" | "advertiser" | "screen" | "ad";
+    title: string;
+    entityName: string;
+    createdAt: string;
+  };
+
+  const allActivities: ActivityItem[] = [
+    ...(recentFranchises ?? []).map((f) => ({
+      id: `franchise-${f.id}`,
+      type: "franchise" as const,
+      title: "New franchise created",
+      entityName: f.name,
+      createdAt: f.created_at,
+    })),
+    ...(recentAdvertisers ?? []).map((a) => ({
+      id: `advertiser-${a.id}`,
+      type: "advertiser" as const,
+      title: "New advertiser registered",
+      entityName: a.name,
+      createdAt: a.created_at,
+    })),
+    ...(recentScreens ?? []).map((s) => ({
+      id: `screen-${s.id}`,
+      type: "screen" as const,
+      title: "New screen added",
+      entityName: s.name,
+      createdAt: s.created_at,
+    })),
+    ...(recentAds ?? []).map((ad) => ({
+      id: `ad-${ad.id}`,
+      type: "ad" as const,
+      title: "New ad submitted",
+      entityName: ad.name,
+      createdAt: ad.created_at,
+    })),
+  ]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 10);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -110,42 +174,7 @@ export default async function AdminPage() {
       {/* ROW 2 — Split 50/50 */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Recent Franchise Activity */}
-        <SectionCard
-          title="Recent Franchise Activity"
-          subtitle="Latest updates from your franchise network"
-        >
-          <div className="max-h-[340px] overflow-y-auto">
-            {recentActivity.length === 0 ? (
-              <EmptyState
-                icon={Users}
-                title="No recent activity"
-                description="Franchise activity will appear here"
-                className="py-10 border-0"
-              />
-            ) : (
-              <div className="space-y-1">
-                {recentActivity.map((item, idx) => (
-                  <StaggerWrapper key={item.id} index={idx} itemsPerRow={1}>
-                    <div className="flex items-center gap-3 rounded-lg px-4 py-3 transition-all hover:bg-muted/50">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                        <Building2 className="h-4 w-4 text-primary" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-card-foreground">
-                          {item.franchise}
-                        </p>
-                        <p className="text-xs text-muted-foreground/70">{item.action}</p>
-                      </div>
-                      <span className="text-xs text-muted-foreground" suppressHydrationWarning>
-                        {item.time}
-                      </span>
-                    </div>
-                  </StaggerWrapper>
-                ))}
-              </div>
-            )}
-          </div>
-        </SectionCard>
+        <RecentActivityFeed activities={allActivities} />
 
         {/* Pending Franchise Approvals */}
         <SectionCard
