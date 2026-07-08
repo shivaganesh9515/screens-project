@@ -14,44 +14,9 @@ export async function POST(
 
     const { adId } = await params;
 
-    const { franchise_id } = await request.json();
-
-    if (!franchise_id) {
-      return NextResponse.json({ error: "franchise_id is required" }, { status: 400 });
-    }
-
-    const { data: franchise, error: franchiseError } = await supabase
-      .from("franchises")
-      .select("id, org_id, managed_by")
-      .eq("id", franchise_id)
-      .single();
-
-    if (franchiseError || !franchise) {
-      return NextResponse.json({ error: "Franchise not found" }, { status: 404 });
-    }
-
-    const { data: member, error: memberError } = await supabase
-      .from("org_members")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("org_id", franchise.org_id)
-      .single();
-
-    if (memberError || !member) {
-      return NextResponse.json({ error: "Not a member of this org" }, { status: 403 });
-    }
-
-    if (member.role !== "franchise_manager") {
-      return NextResponse.json({ error: "Only franchise managers can reject ads" }, { status: 403 });
-    }
-
-    if (franchise.managed_by !== user.id) {
-      return NextResponse.json({ error: "You do not manage this franchise" }, { status: 403 });
-    }
-
     const { data: ad, error: adError } = await supabase
       .from("ads")
-      .select("id")
+      .select("id, org_id, submitted_by_franchise_id")
       .eq("id", adId)
       .single();
 
@@ -59,11 +24,56 @@ export async function POST(
       return NextResponse.json({ error: "Ad not found" }, { status: 404 });
     }
 
+    const { data: member, error: memberError } = await supabase
+      .from("org_members")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("org_id", ad.org_id)
+      .single();
+
+    if (memberError || !member) {
+      return NextResponse.json({ error: "Not a member of this org" }, { status: 403 });
+    }
+
+    let franchiseId: string;
+
+    if (member.role === "main_admin") {
+      if (!ad.submitted_by_franchise_id) {
+        return NextResponse.json({ error: "Ad was not submitted by a franchise" }, { status: 400 });
+      }
+
+      franchiseId = ad.submitted_by_franchise_id;
+    } else if (member.role === "franchise_manager") {
+      const { franchise_id } = await request.json();
+
+      if (!franchise_id) {
+        return NextResponse.json({ error: "franchise_id is required" }, { status: 400 });
+      }
+
+      const { data: franchise, error: franchiseError } = await supabase
+        .from("franchises")
+        .select("id, managed_by")
+        .eq("id", franchise_id)
+        .single();
+
+      if (franchiseError || !franchise) {
+        return NextResponse.json({ error: "Franchise not found" }, { status: 404 });
+      }
+
+      if (franchise.managed_by !== user.id) {
+        return NextResponse.json({ error: "You do not manage this franchise" }, { status: 403 });
+      }
+
+      franchiseId = franchise_id;
+    } else {
+      return NextResponse.json({ error: "You do not have permission to reject ads" }, { status: 403 });
+    }
+
     const { data: target, error: targetError } = await supabase
       .from("ad_franchise_targets")
       .select("ad_id, franchise_id")
       .eq("ad_id", adId)
-      .eq("franchise_id", franchise_id)
+      .eq("franchise_id", franchiseId)
       .single();
 
     if (targetError || !target) {
@@ -78,7 +88,7 @@ export async function POST(
         reviewed_at: new Date().toISOString(),
       })
       .eq("ad_id", adId)
-      .eq("franchise_id", franchise_id);
+      .eq("franchise_id", franchiseId);
 
     if (updateError) {
       return NextResponse.json({ error: "Failed to reject ad" }, { status: 500 });
