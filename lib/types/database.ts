@@ -185,14 +185,16 @@ export interface Advertiser {
 
 export interface Ad {
   id: string;
-  advertiser_id: string;
+  advertiser_id: string | null;
   org_id: string;
   name: string;
   media_item_id: string | null;
+  submitted_by_franchise_id: string | null;
   status: "pending" | "approved" | "rejected";
   created_at: string;
   media_items?: { name: string; type: string } | null;
   advertisers?: { name: string } | null;
+  franchises?: { name: string } | null;
 }
 
 export interface AdFranchiseTarget {
