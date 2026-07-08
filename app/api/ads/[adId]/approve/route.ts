@@ -84,6 +84,56 @@ export async function POST(
       return NextResponse.json({ error: "Failed to approve ad" }, { status: 500 });
     }
 
+    const { data: approvedAd } = await supabase
+      .from("ads")
+      .select("id, name, media_item_id, org_id")
+      .eq("id", adId)
+      .single();
+
+    if (approvedAd?.media_item_id) {
+      const { data: mediaItem } = await supabase
+        .from("media_items")
+        .select("id, duration_ms")
+        .eq("id", approvedAd.media_item_id)
+        .single();
+
+      const { data: screens } = await supabase
+        .from("screens")
+        .select("id")
+        .eq("org_id", approvedAd.org_id)
+        .eq("franchise_id", franchise_id);
+
+      if (screens && screens.length > 0) {
+        const { data: playlist } = await supabase
+          .from("playlists")
+          .insert({ name: approvedAd.name, org_id: approvedAd.org_id })
+          .select("id")
+          .single();
+
+        if (playlist) {
+          const durationMs = mediaItem?.duration_ms ?? 10000;
+
+          await supabase.from("playlist_items").insert({
+            playlist_id: playlist.id,
+            media_item_id: approvedAd.media_item_id,
+            position: 0,
+            duration_ms: durationMs,
+            repeat_count: 1,
+          });
+
+          const scheduleInserts = screens.map((screen) => ({
+            org_id: approvedAd.org_id,
+            playlist_id: playlist.id,
+            screen_id: screen.id,
+            is_default: true,
+            priority: 0,
+          }));
+
+          await supabase.from("schedules").insert(scheduleInserts);
+        }
+      }
+    }
+
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
