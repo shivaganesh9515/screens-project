@@ -70,7 +70,7 @@ export default async function OverviewPage() {
     supabase.from("playlists").select("id, name").eq("org_id", orgId),
     supabase.from("screen_groups").select("id, name").eq("org_id", orgId),
     supabase.from("media_items").select("size_bytes").eq("org_id", orgId),
-    supabase.from("screens").select("id, name, latitude, longitude, is_online, screen_type").eq("org_id", orgId),
+    supabase.from("screens").select("id, name, latitude, longitude, is_online, screen_type, last_seen").eq("org_id", orgId),
     supabase.from("screen_locations").select("*").eq("org_id", orgId),
   ]);
 
