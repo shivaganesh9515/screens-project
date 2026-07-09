@@ -49,16 +49,16 @@ The `memory/` folder is **the single source of truth** for project continuity. E
 | **Project** | Digital signage SaaS (Intelisa clone) |
 | **Stack** | Next.js 15 + Supabase + Tailwind 4 + shadcn/ui |
 | **Root dir** | `wps_download/screens-project/` |
-| **Branch** | Currently `abhinya` (others: `master`, `harshitha`, `srinitha`) |
-| **Supabase** | Schema exists in `supabase/migrations/00001_schema.sql` but NOT connected |
-| **State** | Most UI is built. Runs against in-memory mock data. Key gaps: zone editor, player app |
+| **Branch** | Currently `master` (others: `abhinya`, `harshitha`, `srinitha`) |
+| **Supabase** | Local instance running on `localhost:54321`, schema in `supabase/migrations/00001_schema.sql` (consolidated), `.env.local` configured |
+| **State** | Most UI is built. Connected to local Supabase. Key gap: player playback |
 | **Team** | harshitha (DB/screens/schedules/player), srinitha (auth/media/analytics), abhinya (dashboard/playlists/templates/settings) |
 
 ---
 
 ## 💡 Tips for the New AI
 
-1. **The mock client** (`lib/supabase/mock-client.ts`) means the app runs without real credentials — great for UI work, but data resets on server restart.
+1. **Local Supabase** — running on `localhost:54321`. Start with `supabase stop` then `supabase start`. Use Studio at `http://127.0.0.1:54323` to browse data.
 2. **Server Components first** — Data-heavy pages fetch Supabase directly in server components. Don't rewrite them as client components.
 3. **shadcn/ui only** — Don't mix in other component libraries (Material, Chakra, etc.).
 4. **Zone dimensions are percentages** — Always `x%, y%, w%, h%`, never pixels.

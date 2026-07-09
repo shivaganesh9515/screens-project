@@ -6,6 +6,35 @@
 
 ---
 
+## Session 8 — July 9, 2026
+
+**AI Model:** opencode/mimo-v2-free  
+**Branch:** `master`
+
+### What was done
+- **Local Supabase setup complete** — ran `supabase start`, all containers up on `localhost:54321` (disabled analytics container due to Windows Docker TCP limitation)
+- **Consolidated 15 overlapping migrations** into single `00001_schema.sql` — fixed duplicate table creations (`franchises`, `advertisers`, `ads`, `ad_franchise_targets`, `screen_locations`), duplicate column adds, and mismatched column names (`manager_user_id` → `managed_by`)
+- **Fixed `playlist_items` RLS** — table has no `org_id` column; policy now checks via `playlists.org_id` instead
+- **Fixed FK ordering** — `orgs.screensaver_media_id`, `screens.franchise_id`, `play_logs.ad_id` now added via ALTER TABLE after their referenced tables exist
+- **Configured `.env.local`** — filled with local Supabase credentials (URL, anon key, service role key)
+- **Updated `config.toml`** — disabled analytics (`enabled = false`) for Windows compatibility
+- **Database verified** — all 16 tables created successfully via `supabase db reset`
+- **Committed and pushed** — 54 files changed, +2807/-1312 lines (commit `17f07cf`)
+
+### State at end of session
+- Local Supabase running with full schema
+- `.env.local` configured for local dev
+- App ready to test against real database
+- Git clean, pushed to `origin/master`
+
+### Problems encountered
+- 15 migration files had duplicate version numbers and overlapping CREATE TABLE statements — resolved by consolidating into single migration
+- `playlist_items` had no `org_id` but was in the RLS org-isolation loop — fixed by removing from loop and rewriting standalone policy
+- `franchises.managed_by` vs `franchises.manager_user_id` naming mismatch across migrations — standardized to `managed_by`
+- Analytics container unhealthy on Windows (Docker TCP limitation) — disabled in config
+
+---
+
 ## Session 7 — July 9, 2026
 
 **AI Model:** opencode/mimo-v2-pro  

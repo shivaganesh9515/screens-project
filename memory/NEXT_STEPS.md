@@ -11,7 +11,7 @@
 
 | # | Task | Owner | Why It's Blocking |
 |---|------|-------|-------------------|
-| 1 | **Connect real Supabase** | harshitha | Everything else is against mock data — no persistence, no real testing |
+| ~~1~~ | ~~Connect real Supabase~~ | ✅ Done — local Supabase running on `localhost:54321`, `.env.local` configured, all 16 tables created |
 | 2 | **Build player playback** | harshitha | The actual screen app doesn't play content yet |
 
 ### ⚡ P1 — High Value
@@ -64,6 +64,7 @@
 
 | What | Session | Date |
 |------|---------|------|
+| **Local Supabase setup** — consolidated 15 overlapping migrations into single `00001_schema.sql`, fixed `playlist_items` RLS (no `org_id`), fixed FK ordering (ALTER TABLE for screensaver_media_id, franchise_id, ad_id), disabled analytics for Windows, configured `.env.local` with local credentials, verified all 16 tables | Session 8 | July 9, 2026 |
 | **P2 bug fixes** — signup atomicity (orphan auth user cleanup on onboard failure), reset-password redirect param (`redirect_to`), analytics grouping by `media_item_id` instead of name, server-side date range filter in analytics query | Session 7 | July 9, 2026 |
 | **Full API audit + security hardening + CRUD endpoints** — wrote `docs/API-AUDIT.md`, created shared helpers (`lib/api/auth.ts`, `errors.ts`, `validation.ts`), fixed all 12 existing routes (auth, validation, service client, crypto), created 13 new endpoints (screens list/detail/update/delete, playlists list/create/detail/update/delete, schedules list/create/detail/update/delete, screen-groups list/create/update/delete, media delete, health check, org members list/update/remove, ads list, offline-check) | Session 6 | July 9, 2026 |
 | **P1 bug fixes** — fixed schedule API GET joins (screen_groups), restructured media upload (folder/tags separated from link fields), added tag filtering to media grid (dropdown + badges + list column), verified screen group counts correct | Session 6 | July 9, 2026 |

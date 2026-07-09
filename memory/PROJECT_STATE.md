@@ -15,7 +15,7 @@ Users register media players, upload content, build playlists, schedule what pla
 **Framework:** Next.js 15 (App Router, TypeScript)  
 **UI:** shadcn/ui + Tailwind CSS 4  
 **Auth + DB + Storage:** Supabase (@supabase/ssr, Postgres, Storage, Realtime)  
-**Currently running against:** Mock in-memory Supabase client (`.env.local` has blank credentials)
+**Currently running against:** Local Supabase on `localhost:54321` (`.env.local` configured)
 
 ---
 
@@ -114,7 +114,7 @@ Users register media players, upload content, build playlists, schedule what pla
 
 | Task | Status | Details |
 |------|--------|---------|
-| **Database / Supabase** | ✅ DONE | Schema exists, but `.env.local` is **blank** — no real Supabase connected |
+| **Database / Supabase** | ✅ DONE | Local Supabase running on `localhost:54321`, `.env.local` configured, all 16 tables created via consolidated migration |
 | **Screen Management** | ✅ DONE | Pair, list, detail, groups, heartbeat all built. Group counts verified correct. |
 | **Schedules** | ✅ DONE | Calendar view, create/delete schedules. Group-targeting verified correct. API GET now includes screen_groups join. |
 | **Recurrence UI** | ❌ NOT STARTED | `schedules.recurrence` JSONB column never read/written |
@@ -122,7 +122,7 @@ Users register media players, upload content, build playlists, schedule what pla
 | **Offline Detection** | ✅ DONE | `app/api/screens/offline-check/route.ts` marks screens offline after 90s |
 
 **Known gaps:**
-- Real Supabase credentials needed in `.env.local`
+- Production Supabase credentials needed for deployment (local is working)
 - No recurrence UI (day-of-week picker, time windows)
 - Player app is essentially a shell — no content playback
 
@@ -207,14 +207,17 @@ Tables (all with `org_id` for RLS isolation):
 
 ---
 
-## 8. Environment Variables Needed
+## 8. Environment Variables
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=<from Supabase project>
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<from Supabase project>
-SUPABASE_SERVICE_ROLE_KEY=<from Supabase project>
+# Local Supabase (currently active)
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
+
+**For production:** Replace with Supabase dashboard credentials at `https://supabase.com/dashboard/project/_/settings/api`
 
 ---
 
@@ -236,19 +239,19 @@ This project has a `memory/` folder designed so any AI model can pick up mid-str
 ## 10. How to Start Development
 
 ```bash
-cd wps_download/screens-project
-npm install    # already done
-npm run dev    # starts on localhost:3000
+cd screens-website
+npm install
+supabase start    # starts local Supabase on localhost:54321
+npm run dev       # starts Next.js on localhost:3000
 ```
 
-The app currently runs in **mock mode** (no real Supabase). All data resets on server restart until `.env.local` has real Supabase credentials.
+The app connects to local Supabase automatically via `.env.local`. Data persists across restarts (Docker volume). Use Supabase Studio at `http://127.0.0.1:54323` to browse data.
 
 ---
 
 ## 11. Critical Next Actions (Priority Order)
 
-1. **🔥 Connect real Supabase** — fill `.env.local` with credentials so the app works against real data
-2. **🔧 Build zone editor** (`/templates/[id]/page.tsx`) — bind zones to playlists (biggest feature gap)
-3. **🔧 Build player playback** — make the player actually fetch and play content, log plays
-4. **🔧 Fix bugs** — group counts, schedule group-targeting, signup atomicity, Quick Deploy wiring
-5. **🔧 Polish** — settings invite, logo upload, recurrence UI, media folder/tags, Storage cleanup
+1. ~~**🔥 Connect real Supabase**~~ — ✅ Done — local Supabase running, `.env.local` configured
+2. **🔧 Build player playback** — make the player actually fetch and play content, log plays
+3. **🔧 Fix bugs** — recurrence UI, settings invite, logo upload, media folder/tags, Storage cleanup
+4. **🔧 Polish** — marketing website, compute storageUsed/contentFreshness from real data
