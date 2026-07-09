@@ -22,17 +22,20 @@ export function MediaGrid({ mediaItems, folders, orgId }: { mediaItems: MediaIte
   const [typeFilter, setTypeFilter] = useState("all");
   const [folderFilter, setFolderFilter] = useState("all");
   const [orientationFilter, setOrientationFilter] = useState("all");
+  const [tagFilter, setTagFilter] = useState("all");
   const router = useRouter();
   const supabase = createClient();
 
   const orientations = [...new Set(mediaItems.map((m) => m.orientation).filter(Boolean))] as string[];
+  const allTags = [...new Set(mediaItems.flatMap((m) => m.tags ?? []))] as string[];
 
   const filtered = mediaItems.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase());
     const matchesType = typeFilter === "all" || item.type === typeFilter;
     const matchesFolder = folderFilter === "all" || item.folder === folderFilter;
     const matchesOrientation = orientationFilter === "all" || item.orientation === orientationFilter;
-    return matchesSearch && matchesType && matchesFolder && matchesOrientation;
+    const matchesTag = tagFilter === "all" || (item.tags ?? []).includes(tagFilter);
+    return matchesSearch && matchesType && matchesFolder && matchesOrientation && matchesTag;
   });
 
   const handleDelete = async (item: MediaItem) => {
@@ -80,6 +83,15 @@ export function MediaGrid({ mediaItems, folders, orgId }: { mediaItems: MediaIte
             </SelectContent>
           </Select>
         )}
+        {allTags.length > 0 && (
+          <Select value={tagFilter} onValueChange={(v) => v && setTagFilter(v)}>
+            <SelectTrigger className="w-[130px] h-10 rounded-xl"><SelectValue placeholder="All tags" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Tags</SelectItem>
+              {allTags.map((t) => (<SelectItem key={t} value={t}>{t}</SelectItem>))}
+            </SelectContent>
+          </Select>
+        )}
         <div className="ml-auto flex items-center gap-1 rounded-xl border border-border bg-card p-1">
           <Button variant={view === "grid" ? "secondary" : "ghost"} size="sm" onClick={() => setView("grid")} className="rounded-lg"><Grid3X3 className="h-4 w-4" /></Button>
           <Button variant={view === "list" ? "secondary" : "ghost"} size="sm" onClick={() => setView("list")} className="rounded-lg"><List className="h-4 w-4" /></Button>
@@ -123,6 +135,12 @@ export function MediaGrid({ mediaItems, folders, orgId }: { mediaItems: MediaIte
                 <div className="p-3.5">
                   <p className="truncate text-sm font-medium text-foreground">{item.name}</p>
                   <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">{item.type === "video" ? "Video" : "Image"}{item.size_bytes && <> · {formatFileSize(item.size_bytes)}</>}{item.orientation && <> · {item.orientation.charAt(0).toUpperCase() + item.orientation.slice(1)}</>}{item.source_type === "link" && <> · Live</>}</p>
+                  {item.tags && item.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {item.tags.slice(0, 3).map((tag) => (<Badge key={tag} variant="secondary" className="rounded-full text-xs font-normal">{tag}</Badge>))}
+                      {item.tags.length > 3 && (<Badge variant="secondary" className="rounded-full text-xs font-normal">+{item.tags.length - 3}</Badge>)}
+                    </div>
+                  )}
                 </div>
               </div>
               </StaggerWrapper>
@@ -133,7 +151,7 @@ export function MediaGrid({ mediaItems, folders, orgId }: { mediaItems: MediaIte
         <div className="rounded-2xl border border-border bg-card shadow-card overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="bg-muted/30"><th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Name</th><th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</th><th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Size</th><th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Duration</th><th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Orientation</th><th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Source</th><th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Folder</th><th className="w-16 px-5 py-3.5"></th></tr>
+              <tr className="bg-muted/30"><th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Name</th><th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</th><th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Size</th><th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Duration</th><th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Orientation</th><th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Source</th><th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Folder</th><th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tags</th><th className="w-16 px-5 py-3.5"></th></tr>
             </thead>
             <tbody>
               {filtered.map((item) => (
@@ -145,6 +163,12 @@ export function MediaGrid({ mediaItems, folders, orgId }: { mediaItems: MediaIte
                   <td className="px-5 py-3.5 text-sm text-muted-foreground">{item.orientation ? (item.orientation.charAt(0).toUpperCase() + item.orientation.slice(1)) : "—"}</td>
                   <td className="px-5 py-3.5 text-sm text-muted-foreground">{item.source_type === "link" ? <Badge variant="secondary" className="rounded-lg gap-1"><Video className="h-3 w-3" />Live</Badge> : "Upload"}</td>
                   <td className="px-5 py-3.5 text-sm text-muted-foreground">{item.folder ?? "—"}</td>
+                  <td className="px-5 py-3.5">
+                    <div className="flex flex-wrap gap-1">
+                      {item.tags?.slice(0, 2).map((tag) => (<Badge key={tag} variant="secondary" className="rounded-full text-xs font-normal">{tag}</Badge>))}
+                      {(item.tags?.length ?? 0) > 2 && (<Badge variant="secondary" className="rounded-full text-xs font-normal">+{item.tags!.length - 2}</Badge>)}
+                    </div>
+                  </td>
                   <td className="px-5 py-3.5"><Button variant="ghost" size="sm" onClick={() => handleDelete(item)} className="h-8 w-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button></td>
                 </tr>
               ))}

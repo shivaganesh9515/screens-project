@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AreaChart,
   Area,
@@ -87,9 +88,18 @@ export function AnalyticsDashboard({
   ads?: AdItem[];
   advertisers?: Advertiser[];
 }) {
-  const [dateRange, setDateRange] = useState("30d");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [dateRange, setDateRange] = useState(searchParams.get("range") ?? "90d");
   const [screenFilter, setScreenFilter] = useState("all");
   const [chartView, setChartView] = useState<"overview" | "breakdown" | "adPerformance">("overview");
+
+  const handleDateRangeChange = useCallback((value: string) => {
+    setDateRange(value);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("range", value);
+    router.push(`?${params.toString()}`, { scroll: false });
+  }, [router, searchParams]);
 
   // Filter by date range
   const dateFiltered = useMemo(() => {
@@ -142,18 +152,20 @@ export function AnalyticsDashboard({
     return Object.values(days);
   }, [filtered, dateRange]);
 
-  // Media impressions breakdown
+  // Media impressions breakdown (grouped by media_item_id, not name)
   const mediaBreakdown = useMemo(() => {
-    const map: Record<string, { plays: number; totalDuration: number; type: string }> = {};
+    const map: Record<string, { id: string; name: string; plays: number; totalDuration: number; type: string }> = {};
     for (const log of filtered) {
       const media = log.media_items;
-      if (!media) continue;
-      if (!map[media.name]) map[media.name] = { plays: 0, totalDuration: 0, type: media.type };
-      map[media.name].plays++;
-      map[media.name].totalDuration += log.duration_ms ?? 0;
+      const mediaId = log.media_item_id;
+      if (!media || !mediaId) continue;
+      if (!map[mediaId]) map[mediaId] = { id: mediaId, name: media.name, plays: 0, totalDuration: 0, type: media.type };
+      map[mediaId].plays++;
+      map[mediaId].totalDuration += log.duration_ms ?? 0;
+      // Keep name in sync (handles case where media name changes)
+      map[mediaId].name = media.name;
     }
-    return Object.entries(map)
-      .map(([name, data]) => ({ name, ...data }))
+    return Object.values(map)
       .sort((a, b) => b.plays - a.plays);
   }, [filtered]);
 
@@ -429,7 +441,7 @@ export function AnalyticsDashboard({
           <span className="text-sm font-medium text-card-foreground">Filters</span>
         </div>
         <div className="h-4 w-px bg-border" />
-        <Select value={dateRange} onValueChange={(v) => v && setDateRange(v)}>
+        <Select value={dateRange} onValueChange={(v) => v && handleDateRangeChange(v)}>
           <SelectTrigger className="w-[140px] h-9 rounded-xl">
             <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
             <SelectValue />
@@ -660,7 +672,7 @@ export function AnalyticsDashboard({
                     <Bar dataKey="plays" radius={[0, 4, 4, 0]} barSize={18}>
                       {mediaBreakdown.slice(0, 10).map((entry, i) => (
                         <Cell
-                          key={entry.name}
+                          key={entry.id}
                           fill={entry.type === "image" ? COLORS.primary : COLORS.purple}
                           fillOpacity={0.85}
                         />

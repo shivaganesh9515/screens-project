@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { getServiceClient } from "@/lib/api/auth";
+import { ApiError, handleApiError } from "@/lib/api/errors";
+import { PairCompleteSchema } from "@/lib/api/validation";
 
 export async function PUT(
   request: Request,
@@ -6,20 +9,20 @@ export async function PUT(
 ) {
   try {
     const { code } = await params;
-    const { name } = await request.json();
 
-    let supabase;
-    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      const { createClient } = await import("@supabase/supabase-js");
-      supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-      );
-    } else {
-      const { createClient } = await import("@/lib/supabase/server");
-      supabase = await createClient();
+    if (!code || code.length < 4) {
+      throw new ApiError(400, "VALIDATION_ERROR", "Invalid pairing code");
     }
+
+    const body = await request.json();
+    const parsed = PairCompleteSchema.safeParse(body);
+
+    if (!parsed.success) {
+      throw new ApiError(400, "VALIDATION_ERROR", "Invalid input", parsed.error.flatten().fieldErrors);
+    }
+
+    const { name } = parsed.data;
+    const supabase = await getServiceClient();
 
     const { data: screen, error: findError } = await supabase
       .from("screens")
@@ -29,11 +32,11 @@ export async function PUT(
       .single();
 
     if (findError || !screen) {
-      return NextResponse.json({ error: "Invalid or expired pairing code" }, { status: 404 });
+      throw new ApiError(404, "NOT_FOUND", "Invalid or expired pairing code");
     }
 
     if (new Date(screen.pairing_expires_at) < new Date()) {
-      return NextResponse.json({ error: "Pairing code has expired" }, { status: 410 });
+      throw new ApiError(410, "EXPIRED", "Pairing code has expired");
     }
 
     const { data: updated, error: updateError } = await supabase
@@ -49,11 +52,12 @@ export async function PUT(
       .single();
 
     if (updateError) {
-      return NextResponse.json({ error: "Failed to pair screen" }, { status: 500 });
+      console.error("[PairComplete] Update error:", updateError);
+      throw new ApiError(500, "UPDATE_FAILED", "Failed to pair screen");
     }
 
     return NextResponse.json({ screen: updated });
-  } catch {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  } catch (error) {
+    return handleApiError(error, "screens/pair/[code] PUT");
   }
 }

@@ -1,19 +1,19 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/api/auth";
+import { ApiError, handleApiError } from "@/lib/api/errors";
+import { CreateFranchiseAdSchema } from "@/lib/api/validation";
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const body = await request.json();
+    const parsed = CreateFranchiseAdSchema.safeParse(body);
+
+    if (!parsed.success) {
+      throw new ApiError(400, "VALIDATION_ERROR", "Invalid ad data", parsed.error.flatten().fieldErrors);
     }
 
-    const { name, media_item_id, franchise_id } = await request.json();
-
-    if (!name || !franchise_id) {
-      return NextResponse.json({ error: "Missing required fields: name, franchise_id" }, { status: 400 });
-    }
+    const { supabase, user } = await requireAuth();
+    const { name, media_item_id, franchise_id } = parsed.data;
 
     // Verify the user manages this franchise
     const { data: franchise, error: franchiseError } = await supabase
@@ -23,11 +23,11 @@ export async function POST(request: Request) {
       .single();
 
     if (franchiseError || !franchise) {
-      return NextResponse.json({ error: "Franchise not found" }, { status: 404 });
+      throw new ApiError(404, "NOT_FOUND", "Franchise not found");
     }
 
     if (franchise.managed_by !== user.id) {
-      return NextResponse.json({ error: "You do not manage this franchise" }, { status: 403 });
+      throw new ApiError(403, "FORBIDDEN", "You do not manage this franchise");
     }
 
     // Create the ad with submitted_by_franchise_id
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       .single();
 
     if (adError || !ad) {
-      return NextResponse.json({ error: "Failed to create ad" }, { status: 500 });
+      throw new ApiError(500, "CREATE_FAILED", "Failed to create ad");
     }
 
     // Create the franchise target
@@ -57,13 +57,12 @@ export async function POST(request: Request) {
       });
 
     if (targetError) {
-      // Rollback: delete the ad if target creation fails
       await supabase.from("ads").delete().eq("id", ad.id);
-      return NextResponse.json({ error: "Failed to link franchise" }, { status: 500 });
+      throw new ApiError(500, "CREATE_FAILED", "Failed to link franchise");
     }
 
     return NextResponse.json({ ad, franchise_id });
-  } catch {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  } catch (error) {
+    return handleApiError(error, "ads/franchise POST");
   }
 }

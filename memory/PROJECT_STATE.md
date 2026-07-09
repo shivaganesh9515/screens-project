@@ -99,7 +99,9 @@ Users register media players, upload content, build playlists, schedule what pla
 
 ### Core Infrastructure (ongoing)
 - Supabase schema written and migrated (`00001_schema.sql`)
-- API routes: pairing, heartbeat, play-logs, media upload, org invite
+- API routes: all CRUD endpoints built (screens, playlists, schedules, screen-groups, media, ads, org members, health check, offline-check)
+- Shared API helpers: `lib/api/auth.ts`, `lib/api/errors.ts`, `lib/api/validation.ts`
+- Full API audit: `docs/API-AUDIT.md`
 - Player app kiosk chrome (fullscreen, wake lock, hide cursor, block escape)
 - Middleware for auth session refresh
 - Supabase client helpers (client.ts, server.ts) with mock fallback
@@ -113,16 +115,14 @@ Users register media players, upload content, build playlists, schedule what pla
 | Task | Status | Details |
 |------|--------|---------|
 | **Database / Supabase** | ✅ DONE | Schema exists, but `.env.local` is **blank** — no real Supabase connected |
-| **Screen Management** | ✅ DONE | Pair, list, detail, groups, heartbeat all built. Bug: group counts show 0 |
-| **Schedules** | ✅ DONE | Calendar view, create/delete schedules. Bug: group-targeting silently does nothing |
+| **Screen Management** | ✅ DONE | Pair, list, detail, groups, heartbeat all built. Group counts verified correct. |
+| **Schedules** | ✅ DONE | Calendar view, create/delete schedules. Group-targeting verified correct. API GET now includes screen_groups join. |
 | **Recurrence UI** | ❌ NOT STARTED | `schedules.recurrence` JSONB column never read/written |
 | **Player App** | ❌ MOSTLY NOT STARTED | Kiosk chrome exists. No real pairing, no playback, no play_logs |
+| **Offline Detection** | ✅ DONE | `app/api/screens/offline-check/route.ts` marks screens offline after 90s |
 
 **Known gaps:**
 - Real Supabase credentials needed in `.env.local`
-- Screen group count bug (`_count?.screens` always 0)
-- No offline detection (screens never marked offline)
-- Schedule group-targeting doesn't set `group_id`
 - No recurrence UI (day-of-week picker, time windows)
 - Player app is essentially a shell — no content playback
 
@@ -131,15 +131,13 @@ Users register media players, upload content, build playlists, schedule what pla
 | Task | Status | Details |
 |------|--------|---------|
 | **Login/Signup/Reset** | ✅ DONE | Two small bugs: non-atomic signup, redirect param mismatch |
-| **Media Upload** | ⚠️ PARTIAL | Upload works. No folder/tag picker on upload, no Storage cleanup on delete |
+| **Media Upload** | ✅ DONE | Upload works. Folder/tag fields now properly separated from link fields. |
+| **Media Tags** | ✅ DONE | Tag filtering dropdown, tag badges on grid/list views |
 | **Analytics** | ✅ DONE | Real play_logs reporting. Minor: grouping by name vs id, hard 2000-row cap |
 
 **Known gaps:**
 - Signup isn't atomic (org may fail after auth user created)
 - Reset password redirect param mismatch (`redirect_to` vs `next`)
-- No folder/tag fields on media upload form
-- No tag filtering in media grid
-- Delete doesn't clean up Storage files
 - Analytics groups by name instead of id (duplicate names merge stats)
 - "Uptime %" is live snapshot, not historical
 - Hard 2000-row cap on play_logs query

@@ -223,8 +223,8 @@ export function MediaUpload({ orgId }: { orgId: string }) {
           </ToggleGroup>
         </div>
 
-        {/* Metadata fields */}
-        {(files.length > 0 || uploadMode === "link") && (
+        {/* Link-specific fields */}
+        {uploadMode === "link" && (files.length > 0 || uploadMode === "link") && (
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label htmlFor="linkName" className="text-sm font-medium">Name</Label>
@@ -235,16 +235,22 @@ export function MediaUpload({ orgId }: { orgId: string }) {
               <Input id="linkUrl" placeholder="https://example.com/live-stream.m3u8" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} className="h-10 rounded-xl border-border" />
               <p className="text-xs text-muted-foreground">Paste a direct link to a live video stream (HLS, RTMP, etc.)</p>
             </div>
+            <Button onClick={handleAddLink} disabled={uploading} className="w-full rounded-full gap-2">{uploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Adding...</> : <><Link className="h-4 w-4" /> Add Live Video</>}</Button>
+          </div>
+        )}
+
+        {/* Shared metadata — folder & tags */}
+        {(files.length > 0 || uploadMode === "link") && (
+          <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label htmlFor="folderLink" className="text-sm font-medium">Folder</Label>
-              <Input id="folderLink" placeholder="e.g. marketing, lobby" value={folder} onChange={(e) => setFolder(e.target.value)} className="h-10 rounded-xl border-border" />
+              <Label htmlFor="folderInput" className="text-sm font-medium">Folder</Label>
+              <Input id="folderInput" placeholder="e.g. marketing, lobby" value={folder} onChange={(e) => setFolder(e.target.value)} className="h-10 rounded-xl border-border" />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="tagsLink" className="text-sm font-medium">Tags</Label>
-              <Input id="tagsLink" placeholder="e.g. live, promo" value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} className="h-10 rounded-xl border-border" />
+              <Label htmlFor="tagsInput" className="text-sm font-medium">Tags</Label>
+              <Input id="tagsInput" placeholder="e.g. live, promo" value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} className="h-10 rounded-xl border-border" />
               <p className="text-xs text-muted-foreground">Comma-separated values</p>
             </div>
-            <Button onClick={handleAddLink} disabled={uploading} className="w-full rounded-full gap-2">{uploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Adding...</> : <><Link className="h-4 w-4" /> Add Live Video</>}</Button>
           </div>
         )}
 

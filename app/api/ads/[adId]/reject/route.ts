@@ -1,17 +1,14 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/api/auth";
+import { ApiError, handleApiError } from "@/lib/api/errors";
+import { ApproveRejectAdSchema } from "@/lib/api/validation";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ adId: string }> }
 ) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    const { supabase, user } = await requireAuth();
     const { adId } = await params;
 
     const { data: ad, error: adError } = await supabase
@@ -21,7 +18,7 @@ export async function POST(
       .single();
 
     if (adError || !ad) {
-      return NextResponse.json({ error: "Ad not found" }, { status: 404 });
+      throw new ApiError(404, "NOT_FOUND", "Ad not found");
     }
 
     const { data: member, error: memberError } = await supabase
@@ -32,41 +29,41 @@ export async function POST(
       .single();
 
     if (memberError || !member) {
-      return NextResponse.json({ error: "Not a member of this org" }, { status: 403 });
+      throw new ApiError(403, "FORBIDDEN", "Not a member of this organization");
     }
 
     let franchiseId: string;
 
-    if (member.role === "main_admin") {
+    if (member.role === "admin") {
       if (!ad.submitted_by_franchise_id) {
-        return NextResponse.json({ error: "Ad was not submitted by a franchise" }, { status: 400 });
+        throw new ApiError(400, "INVALID_AD", "Ad was not submitted by a franchise");
       }
-
       franchiseId = ad.submitted_by_franchise_id;
     } else if (member.role === "franchise_manager") {
-      const { franchise_id } = await request.json();
+      const body = await request.json();
+      const parsed = ApproveRejectAdSchema.safeParse(body);
 
-      if (!franchise_id) {
-        return NextResponse.json({ error: "franchise_id is required" }, { status: 400 });
+      if (!parsed.success) {
+        throw new ApiError(400, "VALIDATION_ERROR", "franchise_id is required", parsed.error.flatten().fieldErrors);
       }
 
       const { data: franchise, error: franchiseError } = await supabase
         .from("franchises")
         .select("id, managed_by")
-        .eq("id", franchise_id)
+        .eq("id", parsed.data.franchise_id)
         .single();
 
       if (franchiseError || !franchise) {
-        return NextResponse.json({ error: "Franchise not found" }, { status: 404 });
+        throw new ApiError(404, "NOT_FOUND", "Franchise not found");
       }
 
       if (franchise.managed_by !== user.id) {
-        return NextResponse.json({ error: "You do not manage this franchise" }, { status: 403 });
+        throw new ApiError(403, "FORBIDDEN", "You do not manage this franchise");
       }
 
-      franchiseId = franchise_id;
+      franchiseId = parsed.data.franchise_id;
     } else {
-      return NextResponse.json({ error: "You do not have permission to reject ads" }, { status: 403 });
+      throw new ApiError(403, "FORBIDDEN", "You do not have permission to reject ads");
     }
 
     const { data: target, error: targetError } = await supabase
@@ -77,7 +74,7 @@ export async function POST(
       .single();
 
     if (targetError || !target) {
-      return NextResponse.json({ error: "Ad is not targeted to this franchise" }, { status: 400 });
+      throw new ApiError(400, "NOT_TARGETED", "Ad is not targeted to this franchise");
     }
 
     const { error: updateError } = await supabase
@@ -91,11 +88,11 @@ export async function POST(
       .eq("franchise_id", franchiseId);
 
     if (updateError) {
-      return NextResponse.json({ error: "Failed to reject ad" }, { status: 500 });
+      throw new ApiError(500, "UPDATE_FAILED", "Failed to reject ad");
     }
 
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  } catch (error) {
+    return handleApiError(error, "ads/[adId]/reject POST");
   }
 }

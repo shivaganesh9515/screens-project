@@ -1,48 +1,45 @@
 import { NextResponse } from "next/server";
+import { getServiceClient } from "@/lib/api/auth";
+import { ApiError, handleApiError } from "@/lib/api/errors";
+import { HeartbeatSchema } from "@/lib/api/validation";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { screen_id, latitude, longitude } = body;
+    const parsed = HeartbeatSchema.safeParse(body);
 
-    if (!screen_id) {
-      return NextResponse.json({ error: "screen_id is required" }, { status: 400 });
+    if (!parsed.success) {
+      throw new ApiError(400, "VALIDATION_ERROR", "Invalid heartbeat data", parsed.error.flatten().fieldErrors);
     }
 
-    let supabase;
-    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      const { createClient } = await import("@supabase/supabase-js");
-      supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-      );
-    } else {
-      const { createClient } = await import("@/lib/supabase/server");
-      supabase = await createClient();
-    }
+    const { screen_id, latitude, longitude } = parsed.data;
+    const supabase = await getServiceClient();
 
-    const { data: existing } = await supabase
+    // Verify screen exists
+    const { data: screen, error: findError } = await supabase
       .from("screens")
       .select("id")
       .eq("id", screen_id)
       .single();
 
-    if (!existing) {
-      return NextResponse.json({ error: "Screen not found" }, { status: 404 });
+    if (findError || !screen) {
+      throw new ApiError(404, "NOT_FOUND", "Screen not found");
     }
 
     const now = new Date().toISOString();
+
+    // Update heartbeat
     const { error } = await supabase
       .from("screens")
       .update({ last_seen: now, is_online: true })
       .eq("id", screen_id);
 
     if (error) {
-      return NextResponse.json({ error: "Failed to update heartbeat" }, { status: 500 });
+      console.error("[Heartbeat] Update error:", error);
+      throw new ApiError(500, "UPDATE_FAILED", "Failed to update heartbeat");
     }
 
-    // If GPS coordinates are provided, log to screen_locations
+    // Log GPS if provided
     if (latitude != null && longitude != null) {
       const { error: locError } = await supabase
         .from("screen_locations")
@@ -54,12 +51,12 @@ export async function POST(request: Request) {
         });
 
       if (locError) {
-        console.error("[Heartbeat] Failed to log GPS location:", locError);
+        console.error("[Heartbeat] GPS log error:", locError);
       }
     }
 
     return NextResponse.json({ ok: true, last_seen: now });
-  } catch {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  } catch (error) {
+    return handleApiError(error, "heartbeat POST");
   }
 }

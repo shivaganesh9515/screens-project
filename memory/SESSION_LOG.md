@@ -6,6 +6,42 @@
 
 ---
 
+## Session 7 — July 9, 2026
+
+**AI Model:** opencode/mimo-v2-pro  
+**Branch:** `master`
+
+### What was done
+- **P2 #8: Signup atomicity** — onboard route now deletes orphaned auth user via admin API when org or member creation fails
+- **P2 #9: Reset-password redirect param** — changed from `next` to `redirect_to` to match Supabase email template expectations; callback reads both for backward compatibility
+- **P2 #12: Analytics grouping by id** — mediaBreakdown now groups by `media_item_id` instead of `media.name` (prevents duplicate-name merge); adPlayData already grouped by `ad_id`
+- **P2 #13: Server-side date range filter** — analytics page reads `?range=` search param, applies `.gte("started_at", sinceDate)` for 7d/30d/90d; dashboard uses URL-based date range instead of local state
+
+---
+
+## Session 6 — July 9, 2026
+
+**AI Model:** opencode/big-pickle  
+**Branch:** `master`
+
+### What was done
+- **Full API audit** — wrote `docs/API-AUDIT.md` covering all 12 existing routes (C1-C4 critical, H1-H4 high, M1-M5 medium, L1-L3 low findings)
+- **Shared API helpers** — created `lib/api/auth.ts` (requireAuth, requireOrgMember, requireRole, getUserOrgId, getServiceClient), `lib/api/errors.ts` (ApiError, handleApiError), `lib/api/validation.ts` (Zod schemas for all resources)
+- **Security fixes on all 12 existing routes** — added auth, Zod validation, service client, crypto.getRandomValues(), fixed role mismatch (main_admin→admin), O(1) user lookup attempt (reverted to listUsers due to API limitation)
+- **Created 13 new CRUD endpoints**: screens list/detail/update/delete, playlists list/create/detail/update/delete, schedules list/create/detail/update, screen-groups list/create/update/delete, media delete, health check, org members list/update/remove, ads list
+- **Fixed schedule API GET** — added `screen_groups(name)` join to schedules list and detail endpoints
+- **Added offline detection** — `app/api/screens/offline-check/route.ts` marks screens offline after 90s of no heartbeat, logs to `screen_status_log`
+- **Restructured media upload** — separated link-specific fields (Name, Video URL, Add Live Video button) from shared metadata (Folder, Tags) in `media-upload.tsx`
+- **Added tag filtering to media grid** — tag filter dropdown, tag badges on grid cards, tags column in list view
+
+### State at end of session
+- All new API routes compile cleanly (verified with `npx tsc --noEmit`)
+- API surface complete: all resources have full CRUD
+- NEXT_STEPS.md updated (tasks #10, #18 marked done)
+- PROJECT_STATE.md updated
+
+---
+
 ## Session 5 — July 7, 2026
 
 **AI Model:** opencode/big-pickle  

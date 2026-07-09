@@ -1,15 +1,28 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/api/auth";
+import { ApiError, handleApiError } from "@/lib/api/errors";
+import { PairScreenSchema } from "@/lib/api/validation";
+
+function generatePairingCode(): string {
+  const bytes = new Uint8Array(4);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(36).padStart(2, "0"))
+    .join("")
+    .toUpperCase()
+    .slice(0, 6);
+}
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const body = await request.json();
+    const parsed = PairScreenSchema.safeParse(body);
+
+    if (!parsed.success) {
+      throw new ApiError(400, "VALIDATION_ERROR", "Invalid input", parsed.error.flatten().fieldErrors);
     }
 
-    const { name, group_id } = await request.json();
+    const { supabase, user } = await requireAuth();
+    const { name, group_id } = parsed.data;
 
     const { data: member } = await supabase
       .from("org_members")
@@ -18,11 +31,24 @@ export async function POST(request: Request) {
       .single();
 
     if (!member) {
-      return NextResponse.json({ error: "No org found" }, { status: 400 });
+      throw new ApiError(403, "FORBIDDEN", "No organization found");
     }
 
-    // Generate 6-digit code
-    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    // Validate group_id belongs to this org if provided
+    if (group_id) {
+      const { data: group } = await supabase
+        .from("screen_groups")
+        .select("id")
+        .eq("id", group_id)
+        .eq("org_id", member.org_id)
+        .single();
+
+      if (!group) {
+        throw new ApiError(400, "INVALID_GROUP", "Screen group not found in this organization");
+      }
+    }
+
+    const code = generatePairingCode();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
     const { data: screen, error } = await supabase
@@ -38,11 +64,12 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: "Failed to create screen" }, { status: 500 });
+      console.error("[Pair] Insert error:", error);
+      throw new ApiError(500, "CREATE_FAILED", "Failed to create screen");
     }
 
     return NextResponse.json({ code, screen_id: screen.id, expires_at: expiresAt });
-  } catch {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  } catch (error) {
+    return handleApiError(error, "screens/pair POST");
   }
 }

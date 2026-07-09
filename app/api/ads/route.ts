@@ -1,19 +1,56 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireAuth, getUserOrgId } from "@/lib/api/auth";
+import { ApiError, handleApiError } from "@/lib/api/errors";
+import { CreateAdSchema, ListAdsSchema } from "@/lib/api/validation";
+
+export async function GET(request: Request) {
+  try {
+    const { supabase, user } = await requireAuth();
+    const { orgId } = await getUserOrgId(user.id);
+
+    const { searchParams } = new URL(request.url);
+    const params = Object.fromEntries(searchParams.entries());
+    const parsed = ListAdsSchema.parse(params);
+
+    const offset = (parsed.page - 1) * parsed.page_size;
+
+    let query = supabase
+      .from("ads")
+      .select("*, ad_franchise_targets(franchise_id, status)", { count: "exact" })
+      .eq("org_id", orgId)
+      .order("created_at", { ascending: false });
+
+    if (parsed.status) {
+      query = query.eq("status", parsed.status);
+    }
+
+    const { data, count, error } = await query.range(offset, offset + parsed.page_size - 1);
+
+    if (error) throw error;
+
+    return NextResponse.json({
+      data: data ?? [],
+      total: count ?? 0,
+      page: parsed.page,
+      page_size: parsed.page_size,
+      pages: Math.ceil((count ?? 0) / parsed.page_size),
+    });
+  } catch (error) {
+    return handleApiError(error, "ads GET");
+  }
+}
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const body = await request.json();
+    const parsed = CreateAdSchema.safeParse(body);
+
+    if (!parsed.success) {
+      throw new ApiError(400, "VALIDATION_ERROR", "Invalid ad data", parsed.error.flatten().fieldErrors);
     }
 
-    const { name, media_item_id, franchise_ids } = await request.json();
-
-    if (!name) {
-      return NextResponse.json({ error: "Missing required field: name" }, { status: 400 });
-    }
+    const { supabase, user } = await requireAuth();
+    const { name, media_item_id, franchise_ids } = parsed.data;
 
     const { data: member } = await supabase
       .from("org_members")
@@ -22,9 +59,10 @@ export async function POST(request: Request) {
       .single();
 
     if (!member) {
-      return NextResponse.json({ error: "Not a member of any org" }, { status: 403 });
+      throw new ApiError(403, "FORBIDDEN", "Not a member of any organization");
     }
 
+    // Franchise manager path — auto-sets franchise
     if (member.role === "franchise_manager") {
       const { data: managedFranchise } = await supabase
         .from("franchises")
@@ -33,7 +71,7 @@ export async function POST(request: Request) {
         .single();
 
       if (!managedFranchise) {
-        return NextResponse.json({ error: "No managed franchise found" }, { status: 403 });
+        throw new ApiError(403, "FORBIDDEN", "No managed franchise found");
       }
 
       const { data: ad, error: adError } = await supabase
@@ -48,7 +86,7 @@ export async function POST(request: Request) {
         .single();
 
       if (adError || !ad) {
-        return NextResponse.json({ error: "Failed to create ad" }, { status: 500 });
+        throw new ApiError(500, "CREATE_FAILED", "Failed to create ad");
       }
 
       const { error: targetError } = await supabase
@@ -57,14 +95,15 @@ export async function POST(request: Request) {
 
       if (targetError) {
         await supabase.from("ads").delete().eq("id", ad.id);
-        return NextResponse.json({ error: "Failed to link franchise" }, { status: 500 });
+        throw new ApiError(500, "CREATE_FAILED", "Failed to link franchise");
       }
 
       return NextResponse.json({ ad, franchise_ids: [managedFranchise.id] });
     }
 
-    if (!franchise_ids || !Array.isArray(franchise_ids) || franchise_ids.length === 0) {
-      return NextResponse.json({ error: "Missing required field: franchise_ids" }, { status: 400 });
+    // Advertiser path — requires franchise_ids
+    if (!franchise_ids || franchise_ids.length === 0) {
+      throw new ApiError(400, "VALIDATION_ERROR", "franchise_ids is required for advertisers");
     }
 
     const { data: advertiser, error: advertiserError } = await supabase
@@ -74,7 +113,23 @@ export async function POST(request: Request) {
       .single();
 
     if (advertiserError || !advertiser) {
-      return NextResponse.json({ error: "Advertiser account not found" }, { status: 403 });
+      throw new ApiError(403, "FORBIDDEN", "Advertiser account not found");
+    }
+
+    // Verify franchise_ids belong to the same org
+    const { data: validFranchises } = await supabase
+      .from("franchises")
+      .select("id")
+      .eq("org_id", advertiser.org_id)
+      .in("id", franchise_ids);
+
+    const validIds = new Set(validFranchises?.map((f) => f.id) ?? []);
+    const invalidFranchises = franchise_ids.filter((id) => !validIds.has(id));
+
+    if (invalidFranchises.length > 0) {
+      throw new ApiError(400, "INVALID_FRANCHISES", "Some franchises do not belong to your organization", {
+        invalid: invalidFranchises,
+      });
     }
 
     const { data: ad, error: adError } = await supabase
@@ -89,10 +144,10 @@ export async function POST(request: Request) {
       .single();
 
     if (adError || !ad) {
-      return NextResponse.json({ error: "Failed to create ad" }, { status: 500 });
+      throw new ApiError(500, "CREATE_FAILED", "Failed to create ad");
     }
 
-    const targets = franchise_ids.map((franchise_id: string) => ({
+    const targets = franchise_ids.map((franchise_id) => ({
       ad_id: ad.id,
       franchise_id,
     }));
@@ -103,11 +158,11 @@ export async function POST(request: Request) {
 
     if (targetsError) {
       await supabase.from("ads").delete().eq("id", ad.id);
-      return NextResponse.json({ error: "Failed to link franchises" }, { status: 500 });
+      throw new ApiError(500, "CREATE_FAILED", "Failed to link franchises");
     }
 
     return NextResponse.json({ ad, franchise_ids });
-  } catch {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  } catch (error) {
+    return handleApiError(error, "ads POST");
   }
 }

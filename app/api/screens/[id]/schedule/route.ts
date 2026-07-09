@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getServiceClient } from "@/lib/api/auth";
+import { ApiError, handleApiError } from "@/lib/api/errors";
 
 export async function GET(
   request: Request,
@@ -7,18 +9,11 @@ export async function GET(
   try {
     const { id } = await params;
 
-    let supabase;
-    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      const { createClient } = await import("@supabase/supabase-js");
-      supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-      );
-    } else {
-      const { createClient } = await import("@/lib/supabase/server");
-      supabase = await createClient();
+    if (!id) {
+      throw new ApiError(400, "VALIDATION_ERROR", "Screen ID is required");
     }
+
+    const supabase = await getServiceClient();
 
     const { data: screen, error: screenErr } = await supabase
       .from("screens")
@@ -27,7 +22,7 @@ export async function GET(
       .single();
 
     if (screenErr || !screen) {
-      return NextResponse.json({ error: "Screen not found" }, { status: 404 });
+      throw new ApiError(404, "NOT_FOUND", "Screen not found");
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -48,10 +43,19 @@ export async function GET(
       .limit(50);
 
     if (!schedules || schedules.length === 0) {
-      return NextResponse.json({ playlist: null, playlist_id: null, template_id: null, zones: [], items: [], next_change_at: null });
+      return NextResponse.json({
+        playlist: null,
+        playlist_id: null,
+        template_id: null,
+        zones: [],
+        items: [],
+        next_change_at: null,
+      });
     }
 
     const now = new Date().toISOString();
+
+    // Find currently active schedule, then fall back to default
     let selected = schedules.find(
       (s: any) =>
         !s.is_default &&
@@ -63,12 +67,21 @@ export async function GET(
       selected = schedules.find((s: any) => s.is_default);
     }
     if (!selected || !selected.playlist_id) {
-      return NextResponse.json({ playlist: null, playlist_id: null, template_id: null, zones: [], items: [], next_change_at: null });
+      return NextResponse.json({
+        playlist: null,
+        playlist_id: null,
+        template_id: selected?.template_id ?? null,
+        zones: [],
+        items: [],
+        next_change_at: null,
+      });
     }
 
     const { data: items } = await supabase
       .from("playlist_items")
-      .select("id, media_items(id, name, type, storage_path, duration_ms), duration_ms, position")
+      .select(
+        "id, media_items(id, name, type, storage_path, duration_ms), duration_ms, position"
+      )
       .eq("playlist_id", selected.playlist_id)
       .order("position", { ascending: true });
 
@@ -90,7 +103,7 @@ export async function GET(
       items: itemsWithUrls,
       next_change_at: null,
     });
-  } catch {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  } catch (error) {
+    return handleApiError(error, "schedule GET");
   }
 }
