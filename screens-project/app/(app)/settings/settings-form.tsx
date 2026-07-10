@@ -293,7 +293,7 @@ export function SettingsForm({ user, org, members, role, mediaItems }: { user: a
           {isAdmin && (
             <form onSubmit={handleInvite} className="flex gap-2">
               <Input placeholder="email@example.com" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} type="email" required className="flex-1 h-11 rounded-lg" />
-              <Select value={inviteRole} onValueChange={(v) => v && setInviteRole(v)}><SelectTrigger className="w-[110px] h-11 rounded-lg"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="admin">Admin</SelectItem><SelectItem value="editor">Editor</SelectItem><SelectItem value="viewer">Viewer</SelectItem></SelectContent></Select>
+              <Select value={inviteRole} onValueChange={(v) => v && setInviteRole(v)}><SelectTrigger className="w-[110px] h-11 rounded-lg"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="admin">Admin</SelectItem><SelectItem value="editor">Editor</SelectItem><SelectItem value="viewer">Read Only</SelectItem></SelectContent></Select>
               <Button type="submit" disabled={savingMember} className="rounded-full h-11">Invite</Button>
             </form>
           )}

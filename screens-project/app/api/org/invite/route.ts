@@ -86,7 +86,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to add member: " + insertError.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, message: `${email} has been added as ${role}` });
+    const roleLabel: Record<string, string> = {
+      admin: "Admin",
+      editor: "Editor",
+      viewer: "Read Only",
+      franchise: "Franchise",
+      advertiser: "Advertiser",
+    };
+    return NextResponse.json({ success: true, message: `${email} has been added as ${roleLabel[role] || role}` });
   } catch (err) {
     console.error("[Invite API] Error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
