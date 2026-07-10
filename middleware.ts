@@ -1,53 +1,53 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { jwtVerify } from "jose";
+import { COOKIE_NAME } from "@/lib/auth/session";
+
+const SESSION_SECRET = new TextEncoder().encode(
+  process.env.LOCAL_AUTH_SECRET || "local-dev-secret-do-not-use-in-production-32chars"
+);
 
 export async function middleware(request: NextRequest) {
-  // In mock mode (no Supabase env vars), skip auth checks and allow all routes
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    return NextResponse.next({ request });
-  }
+  let response = NextResponse.next({ request });
 
-  let supabaseResponse = NextResponse.next({ request });
+  // Check local session cookie
+  const token = request.cookies.get(COOKIE_NAME)?.value;
+  let user: any = null;
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            request.cookies.set(name, value)
-          );
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
-        },
-      },
+  if (token) {
+    try {
+      const { payload } = await jwtVerify(token, SESSION_SECRET);
+      user = payload;
+    } catch {
+      // Invalid token — ignore
     }
-  );
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // Protected routes
-  const isAuthPage = request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/signup") ||
-    request.nextUrl.pathname.startsWith("/reset-password") ||
-    request.nextUrl.pathname.startsWith("/auth");
-
-  const isPlayerPage = request.nextUrl.pathname.startsWith("/player");
-  const isAdvertiserPage = request.nextUrl.pathname.startsWith("/advertiser");
-  const isApiRoute = request.nextUrl.pathname.startsWith("/api");
-
-  // API routes, player pages, and advertiser pages are handled differently
-  if (isApiRoute || isPlayerPage || isAdvertiserPage) {
-    return supabaseResponse;
   }
+
+  const pathname = request.nextUrl.pathname;
+
+  // API routes — pass through (they handle auth themselves)
+  if (pathname.startsWith("/api/")) {
+    // Attach user info to request header for API routes
+    if (user) {
+      const requestHeaders = new Headers(request.headers);
+      requestHeaders.set("x-user-id", user.id);
+      requestHeaders.set("x-user-role", user.role);
+      response = NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      });
+    }
+    return response;
+  }
+
+  // Player pages — always allowed
+  if (pathname.startsWith("/player")) {
+    return response;
+  }
+
+  // Auth pages
+  const isAuthPage = pathname === "/login" || pathname === "/signup" ||
+    pathname === "/reset-password" || pathname.startsWith("/auth/");
 
   // Redirect unauthenticated users to login
   if (!user && !isAuthPage) {
@@ -56,14 +56,23 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Redirect authenticated users away from auth pages
+  // Redirect authenticated users away from login page
   if (user && isAuthPage) {
     const url = request.nextUrl.clone();
-    url.pathname = "/overview";
+    // Route based on role
+    if (user.role === "franchise_manager") {
+      url.pathname = "/franchise";
+    } else if (user.role === "advertiser") {
+      url.pathname = "/advertiser";
+    } else if (user.role === "admin" || user.role === "main_admin") {
+      url.pathname = "/admin";
+    } else {
+      url.pathname = "/overview";
+    }
     return NextResponse.redirect(url);
   }
 
-  return supabaseResponse;
+  return response;
 }
 
 export const config = {

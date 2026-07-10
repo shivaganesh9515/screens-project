@@ -38,3 +38,6 @@ supabase/.temp/
 
 # AI Memory (Local Only)
 memory/
+
+# Local SQLite database
+.data/

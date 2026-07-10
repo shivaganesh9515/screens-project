@@ -106,6 +106,8 @@ export const CreateFranchiseAdSchema = z.object({
   name: z.string().min(1).max(200),
   media_item_id: z.string().uuid().optional(),
   franchise_id: z.string().uuid("Invalid franchise ID"),
+  screen_type: z.enum(["static", "bus", "auto"]).optional(),
+  orientation: z.enum(["landscape", "portrait"]).optional(),
 });
 
 export const ApproveRejectAdSchema = z.object({

@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       .select("id")
       .in("id", screenIds);
 
-    const validScreenIds = new Set(screens?.map((s) => s.id) ?? []);
+    const validScreenIds = new Set(screens?.map((s: { id: string }) => s.id) ?? []);
     const invalidScreens = screenIds.filter((id) => !validScreenIds.has(id));
 
     if (invalidScreens.length > 0) {

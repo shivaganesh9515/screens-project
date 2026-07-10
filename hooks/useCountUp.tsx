@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect, useRef, type ReactNode } from "react";
 
 interface CountUpOptions {

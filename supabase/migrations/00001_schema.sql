@@ -167,6 +167,8 @@ CREATE TABLE ads (
   org_id UUID REFERENCES orgs(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   media_item_id UUID REFERENCES media_items(id) ON DELETE SET NULL,
+  screen_type TEXT CHECK (screen_type IN ('static', 'bus', 'auto')),
+  orientation TEXT CHECK (orientation IN ('landscape', 'portrait')),
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   submitted_by_franchise_id UUID REFERENCES franchises(id) ON DELETE SET NULL

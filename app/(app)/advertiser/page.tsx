@@ -109,14 +109,27 @@ export default async function AdvertiserPage() {
     },
   ];
 
-  // Fetch real advertisements belonging to this advertiser
-  const { data: myAdvertisements } = advertiserId
+  // Fetch real advertisements belonging to this advertiser (flat, no nested join)
+  const { data: adsRaw } = advertiserId
     ? await supabase
         .from("ads")
-        .select("id, name, status, created_at, media_items(name)")
+        .select("id, name, status, created_at, media_item_id")
         .eq("advertiser_id", advertiserId)
         .order("created_at", { ascending: false })
     : { data: [] };
+
+  // Enrich ads with media_items name
+  const adMediaIds = [...new Set((adsRaw ?? []).map((a: any) => a.media_item_id).filter(Boolean))];
+  const { data: adMediaItems } = adMediaIds.length > 0
+    ? await supabase.from("media_items").select("id, name").in("id", adMediaIds)
+    : { data: [] };
+  const adMediaById = new Map((adMediaItems ?? []).map((m: any) => [m.id, m.name]));
+  const myAdvertisements = (adsRaw ?? []).map((ad: any) => ({
+    ...ad,
+    media_items: ad.media_item_id && adMediaById.has(ad.media_item_id)
+      ? { name: adMediaById.get(ad.media_item_id) }
+      : null,
+  }));
 
   // Fetch media items belonging to the organization
   const orgId = advertiser?.org_id;
@@ -134,14 +147,48 @@ export default async function AdvertiserPage() {
     .select("id, name")
     .order("name");
 
-  // Fetch approval status by franchise (ad_franchise_targets with ad and franchise info)
-  const { data: approvalByFranchise } = advertiserId
+  // Fetch approval status by franchise (flat, no nested joins)
+  const { data: approvalRaw } = advertiserId
     ? await supabase
         .from("ad_franchise_targets")
-        .select("id, status, reviewed_at, ad_id, franchise_id, ads!inner(name, created_at, advertiser_id), franchises!inner(name)")
-        .eq("ads.advertiser_id", advertiserId)
-        .order("ads(created_at)", { ascending: false })
+        .select("id, status, reviewed_at, ad_id, franchise_id")
     : { data: [] };
+
+  // Enrich with ad and franchise names
+  const targetAdIds = [...new Set((approvalRaw ?? []).map((t: any) => t.ad_id).filter(Boolean))];
+  const targetFranchiseIds = [...new Set((approvalRaw ?? []).map((t: any) => t.franchise_id).filter(Boolean))];
+
+  const [
+    { data: targetAds },
+    { data: targetFranchises },
+  ] = await Promise.all([
+    targetAdIds.length > 0
+      ? supabase.from("ads").select("id, name, created_at, advertiser_id").in("id", targetAdIds)
+      : { data: [] },
+    targetFranchiseIds.length > 0
+      ? supabase.from("franchises").select("id, name").in("id", targetFranchiseIds)
+      : { data: [] },
+  ]);
+
+  const adMap = new Map<string, any>((targetAds ?? []).map((a: any) => [a.id, a]));
+  const franchiseMap = new Map<string, any>((targetFranchises ?? []).map((f: any) => [f.id, f]));
+
+  const approvalByFranchise = (approvalRaw ?? [])
+    .filter((t: any) => {
+      // Only include targets for this advertiser's ads
+      const ad = adMap.get(t.ad_id);
+      return ad && ad.advertiser_id === advertiserId;
+    })
+    .map((t: any) => ({
+      ...t,
+      ads: adMap.has(t.ad_id) ? adMap.get(t.ad_id) : null,
+      franchises: franchiseMap.has(t.franchise_id) ? franchiseMap.get(t.franchise_id) : null,
+    }))
+    .sort((a: any, b: any) => {
+      const aDate = a.ads?.created_at ?? "";
+      const bDate = b.ads?.created_at ?? "";
+      return bDate.localeCompare(aDate);
+    });
 
   // Fetch analytics data: play_logs for advertiser's ads
   const adIds = (myAdvertisements ?? []).map((ad: any) => ad.id);

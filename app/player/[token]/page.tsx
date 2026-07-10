@@ -44,6 +44,8 @@ export default function PlayerPage({ params }: { params: Promise<{ token: string
   const [currentIndex, setCurrentIndex] = useState(0);
   const [playlistId, setPlaylistId] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
+  const [prevIndex, setPrevIndex] = useState<number | null>(null);
+  const [transitioning, setTransitioning] = useState(false);
   const [activePlaylistId, setActivePlaylistId] = useState<string | null>(null);
   const [screenType, setScreenType] = useState<string | null>(null);
 
@@ -53,11 +55,14 @@ export default function PlayerPage({ params }: { params: Promise<{ token: string
   const heartbeatInterval = useRef<NodeJS.Timeout | null>(null);
   const playLogBuffer = useRef<PlayLogEntry[]>([]);
   const advanceTimer = useRef<NodeJS.Timeout | null>(null);
+  const transitionTimer = useRef<NodeJS.Timeout | null>(null);
   const fetchInterval = useRef<NodeJS.Timeout | null>(null);
   const playlistRef = useRef<PlaylistItemData[]>([]);
   const playStartTimeRef = useRef<string>("");
   const gpsWatchIdRef = useRef<number | null>(null);
   const gpsPositionRef = useRef<{ latitude: number; longitude: number } | null>(null);
+  const prevIndexRef = useRef<number | null>(null);
+  const videoEndedRef = useRef(false);
 
   useEffect(() => { playlistRef.current = playlist; }, [playlist]);
 
@@ -145,6 +150,8 @@ export default function PlayerPage({ params }: { params: Promise<{ token: string
         setPlaylistId(data.playlist.id);
         setActivePlaylistId(data.playlist.id);
         setCurrentIndex(0);
+        setPrevIndex(null);
+        setTransitioning(false);
       } else if (!data.playlist) {
         setPlaylist([]);
         setActivePlaylistId(null);
@@ -171,14 +178,33 @@ export default function PlayerPage({ params }: { params: Promise<{ token: string
     return () => { channel.unsubscribe(); };
   }, [paired, screenId, fetchNowPlaying]);
 
-  // Advance to next item, loop at end
+  // Advance to next item, loop at end — no external deps needed (uses refs)
   const advance = useCallback(() => {
+    // Store the current index (from ref) before advancing
+    const current = currentIndexRef.current;
+    prevIndexRef.current = current;
+    setPrevIndex(current);
+    setTransitioning(true);
+    videoEndedRef.current = false;
+
     setCurrentIndex((prev) => {
       const next = prev + 1;
       if (next >= playlistRef.current.length) return 0;
       return next;
     });
+
+    // Clear transition state after animation completes with safety margin
+    if (transitionTimer.current) clearTimeout(transitionTimer.current);
+    transitionTimer.current = setTimeout(() => {
+      setTransitioning(false);
+      setPrevIndex(null);
+      prevIndexRef.current = null;
+    }, 600);
   }, []);
+
+  // Keep a ref in sync with currentIndex for use in advance()
+  const currentIndexRef = useRef(currentIndex);
+  useEffect(() => { currentIndexRef.current = currentIndex; }, [currentIndex]);
 
   // Log play with correct schema field names
   const logPlay = useCallback((mediaItemId: string, durationMs: number) => {
@@ -290,20 +316,24 @@ export default function PlayerPage({ params }: { params: Promise<{ token: string
       video.src = media.url;
       video.load();
       video.play().catch(() => {});
-      let ended = false;
+      videoEndedRef.current = false;
       const onEnded = () => {
-        ended = true;
+        if (videoEndedRef.current) return;
+        videoEndedRef.current = true;
         logPlay(media.id, duration);
         advance();
       };
       video.addEventListener("ended", onEnded);
+      // Fallback: use duration as max timeout, cap at 60s
+      const maxPlayTime = Math.min(Math.max(duration, 30000), 60000);
       advanceTimer.current = setTimeout(() => {
-        if (!ended) {
+        if (!videoEndedRef.current) {
+          videoEndedRef.current = true;
           video.removeEventListener("ended", onEnded);
           logPlay(media.id, duration);
           advance();
         }
-      }, Math.max(duration, 30000));
+      }, maxPlayTime);
       return () => {
         video.removeEventListener("ended", onEnded);
         if (advanceTimer.current) clearTimeout(advanceTimer.current);
@@ -320,6 +350,13 @@ export default function PlayerPage({ params }: { params: Promise<{ token: string
       };
     }
   }, [currentIndex, playlist, advance, logPlay]);
+
+  // Cleanup transition timer on unmount
+  useEffect(() => {
+    return () => {
+      if (transitionTimer.current) clearTimeout(transitionTimer.current);
+    };
+  }, []);
 
   // --- Render ---
 
@@ -391,29 +428,96 @@ export default function PlayerPage({ params }: { params: Promise<{ token: string
     );
   }
 
-  // Playing: render real media
+  // Playing: render real media with crossfade
   const currentItem = playlist[currentIndex]?.media_items;
+  const prevItem = prevIndex !== null ? playlist[prevIndex]?.media_items : null;
+
   return (
-    <div className="h-screen w-screen overflow-hidden bg-black">
-      {currentItem?.type === "video" ? (
-        <video
-          ref={videoRef}
-          key={currentItem.id}
-          className="h-full w-full object-contain animate-fade-in"
-          muted
-          playsInline
-          loop
-        />
-      ) : (
-        currentItem?.type === "image" && (
-          <img
-            key={currentItem.id}
-            src={currentItem.url}
-            alt={currentItem.name}
-            className="h-full w-full object-contain animate-fade-in"
-          />
-        )
+    <div className="h-screen w-screen overflow-hidden bg-black relative">
+      {/* Previous item fading out */}
+      {prevItem && (
+        <div
+          className="absolute inset-0 transition-opacity duration-500 ease-out"
+          style={{ opacity: transitioning ? 0 : 1 }}
+        >
+          {prevItem.type === "video" ? (
+            <video
+              key={`prev-${prevItem.id}`}
+              className="h-full w-full object-contain"
+              muted
+              playsInline
+              src={prevItem.url}
+            />
+          ) : (
+            <img
+              key={`prev-${prevItem.id}`}
+              src={prevItem.url}
+              alt={prevItem.name}
+              className="h-full w-full object-contain"
+            />
+          )}
+        </div>
       )}
+      {/* Current item fading in */}
+      <div
+        className="absolute inset-0 transition-opacity duration-500 ease-out"
+        style={{
+          opacity: prevItem ? (transitioning ? 1 : 0) : 1,
+        }}
+      >
+        {currentItem?.type === "video" ? (
+          <video
+            ref={videoRef}
+            key={currentItem.id}
+            className="h-full w-full object-contain"
+            muted
+            playsInline
+          />
+        ) : (
+          currentItem?.type === "image" && (
+            <img
+              key={currentItem.id}
+              src={currentItem.url}
+              alt={currentItem.name}
+              className="h-full w-full object-contain"
+            />
+          )
+        )}
+      </div>
+      {/* Playback progress indicator */}
+      {playlist.length > 1 && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
+          {playlist.map((_, i) => (
+            <div
+              key={i}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === currentIndex
+                  ? "w-6 bg-white/90"
+                  : "w-1.5 bg-white/30"
+              }`}
+            />
+          ))}
+        </div>
+      )}
+      {/* Screen status badge */}
+      <div className="absolute top-4 right-4 flex items-center gap-2">
+        {offline ? (
+          <span className="flex items-center gap-1.5 rounded-full bg-red-500/20 px-3 py-1 text-xs font-medium text-red-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+            Offline
+          </span>
+        ) : (
+          <span className="flex items-center gap-1.5 rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+            Live
+          </span>
+        )}
+        {screenType && (
+          <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white/70 capitalize">
+            {screenType}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

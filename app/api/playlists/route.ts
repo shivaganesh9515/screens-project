@@ -23,7 +23,7 @@ export async function GET(request: Request) {
 
     if (error) throw error;
 
-    const playlists = (data ?? []).map((p) => ({
+    const playlists = (data ?? []).map((p: { playlist_items?: { count: number }[] }) => ({
       ...p,
       item_count: p.playlist_items?.[0]?.count ?? 0,
       playlist_items: undefined,

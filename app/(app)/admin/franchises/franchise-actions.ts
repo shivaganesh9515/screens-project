@@ -33,7 +33,7 @@ export async function getFranchises(): Promise<FranchiseWithDetails[]> {
   if (franchisesError) throw new Error("Failed to fetch franchises");
 
   const franchisesWithDetails: FranchiseWithDetails[] = await Promise.all(
-    (franchises || []).map(async (franchise) => {
+    (franchises || []).map(async (franchise: Franchise) => {
       const { count: screenCount } = await supabase
         .from("screens")
         .select("*", { count: "exact", head: true })

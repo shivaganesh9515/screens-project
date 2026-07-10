@@ -21,7 +21,8 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Monitor, Bus, Car, Maximize2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 
 interface MediaItem {
@@ -41,6 +42,9 @@ interface CreateAdvertisementDialogProps {
   franchises: Franchise[];
 }
 
+type ScreenType = "static" | "bus" | "auto";
+type Orientation = "landscape" | "portrait";
+
 export function CreateAdvertisementDialog({
   advertiserId,
   orgId,
@@ -50,9 +54,17 @@ export function CreateAdvertisementDialog({
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [mediaItemId, setMediaItemId] = useState<string>("");
+  const [screenType, setScreenType] = useState<ScreenType>("static");
+  const [orientation, setOrientation] = useState<Orientation>("landscape");
   const [selectedFranchises, setSelectedFranchises] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
   const router = useRouter();
+
+  const screenTypeOptions: { value: ScreenType; label: string; icon: typeof Monitor }[] = [
+    { value: "static", label: "Static", icon: Monitor },
+    { value: "bus", label: "Bus", icon: Bus },
+    { value: "auto", label: "Auto", icon: Car },
+  ];
 
   const handleFranchiseToggle = (franchiseId: string) => {
     setSelectedFranchises((prev) =>
@@ -85,7 +97,7 @@ export function CreateAdvertisementDialog({
     try {
       const supabase = createClient();
 
-      // Insert the ad
+      // Insert the ad with type + orientation
       const { data: ad, error: adError } = await supabase
         .from("ads")
         .insert({
@@ -93,6 +105,8 @@ export function CreateAdvertisementDialog({
           org_id: orgId,
           name: name.trim(),
           media_item_id: mediaItemId,
+          screen_type: screenType,
+          orientation: orientation,
           status: "pending",
         })
         .select("id")
@@ -117,6 +131,8 @@ export function CreateAdvertisementDialog({
       setOpen(false);
       setName("");
       setMediaItemId("");
+      setScreenType("static");
+      setOrientation("landscape");
       setSelectedFranchises([]);
       router.refresh();
     } catch (error) {
@@ -150,6 +166,7 @@ export function CreateAdvertisementDialog({
               className="h-11 rounded-xl"
             />
           </div>
+
           <div className="space-y-2">
             <Label>Select Media</Label>
             <Select value={mediaItemId} onValueChange={(value) => setMediaItemId(value ?? "")}>
@@ -171,6 +188,62 @@ export function CreateAdvertisementDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Screen Type Selector */}
+          <div className="space-y-2">
+            <Label>Advertisement Type</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {screenTypeOptions.map((opt) => {
+                const Icon = opt.icon;
+                const isActive = screenType === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setScreenType(opt.value)}
+                    className={cn(
+                      "flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 transition-all duration-150",
+                      isActive
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-input hover:border-muted-foreground/30 text-muted-foreground"
+                    )}
+                  >
+                    <Icon className={cn("h-5 w-5", isActive && "text-primary")} />
+                    <span className="text-xs font-medium">{opt.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Orientation Selector */}
+          <div className="space-y-2">
+            <Label>Orientation</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {(["landscape", "portrait"] as Orientation[]).map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => setOrientation(opt)}
+                  className={cn(
+                    "flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 transition-all duration-150",
+                    orientation === opt
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-input hover:border-muted-foreground/30 text-muted-foreground"
+                  )}
+                >
+                  <Maximize2
+                    className={cn(
+                      "h-5 w-5 transition-transform",
+                      opt === "portrait" && "rotate-90"
+                    )}
+                  />
+                  <span className="text-xs font-medium capitalize">{opt}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label>Target Franchises</Label>
             <div className="max-h-40 overflow-y-auto rounded-xl border border-input p-2 space-y-1">
@@ -197,7 +270,8 @@ export function CreateAdvertisementDialog({
               </p>
             )}
           </div>
-          <div className="flex justify-end gap-2">
+
+          <div className="flex justify-end gap-2 pt-2">
             <Button
               type="button"
               variant="outline"
@@ -207,7 +281,7 @@ export function CreateAdvertisementDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={creating} className="rounded-xl">
-              {creating ? "Creating..." : "Submit"}
+              {creating ? "Creating..." : "Submit for Approval"}
             </Button>
           </div>
         </form>

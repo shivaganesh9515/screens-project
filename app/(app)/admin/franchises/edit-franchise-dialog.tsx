@@ -94,7 +94,7 @@ export function EditFranchiseDialog({ franchise, managers }: EditFranchiseDialog
           </div>
           <div className="space-y-2">
             <Label>Assign Manager</Label>
-            <Select value={managedBy} onValueChange={setManagedBy}>
+            <Select value={managedBy} onValueChange={(value) => setManagedBy(value ?? "")}>
               <SelectTrigger className="h-11 rounded-xl">
                 <SelectValue placeholder="Select a manager" />
               </SelectTrigger>

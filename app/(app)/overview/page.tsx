@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { fetchEnrichedPlayLogs } from "@/lib/db/helpers";
 import { AnalyticsCards } from "./analytics-cards";
 import { PlaybackActivityChart } from "./playback-activity-chart";
 import { RecentActivity } from "./recent-activity";
@@ -54,7 +55,7 @@ export default async function OverviewPage() {
     { count: totalMedia },
     { data: screens },
     { data: mediaItems },
-    { data: schedules },
+    { data: schedulesRaw },
     { data: playlists },
     { data: screenGroups },
     { data: allMediaForMetrics },
@@ -66,7 +67,7 @@ export default async function OverviewPage() {
     supabase.from("media_items").select("*", { count: "exact", head: true }).eq("org_id", orgId),
     supabase.from("screens").select("*").eq("org_id", orgId).order("last_seen", { ascending: false }).limit(5),
     supabase.from("media_items").select("*").eq("org_id", orgId).order("created_at", { ascending: false }).limit(5),
-    supabase.from("schedules").select("*, playlists(name), screens(name), screen_groups(name)").eq("org_id", orgId).order("created_at", { ascending: false }).limit(3),
+    supabase.from("schedules").select("id, screen_id, group_id, playlist_id, is_default, priority, start_at, end_at").eq("org_id", orgId).order("created_at", { ascending: false }).limit(3),
     supabase.from("playlists").select("id, name").eq("org_id", orgId),
     supabase.from("screen_groups").select("id, name").eq("org_id", orgId),
     supabase.from("media_items").select("size_bytes").eq("org_id", orgId),
@@ -76,14 +77,45 @@ export default async function OverviewPage() {
 
   const screenRows = (screens ?? []) as ScreenRow[];
   const screenIds = screenRows.map((s) => s.id);
-  const { data: allPlayLogs } = screenIds.length > 0
-    ? await supabase
-        .from("play_logs")
-        .select("*, screens!inner(name), media_items(name, type)")
-        .in("screen_id", screenIds)
-        .order("started_at", { ascending: false })
-        .limit(1000)
+  const playLogsResult = screenIds.length > 0
+    ? await fetchEnrichedPlayLogs({
+        screenIds,
+        limit: 1000,
+      })
     : { data: [] };
+  const allPlayLogs = playLogsResult.data ?? [];
+
+  // Enrich schedules with related names
+  const schedulePlaylistIds = [...new Set((schedulesRaw ?? []).map((s: any) => s.playlist_id).filter(Boolean))];
+  const scheduleScreenIds = [...new Set((schedulesRaw ?? []).map((s: any) => s.screen_id).filter(Boolean))];
+  const scheduleGroupIds = [...new Set((schedulesRaw ?? []).map((s: any) => s.group_id).filter(Boolean))];
+
+  const [
+    { data: schedulePlaylists },
+    { data: scheduleScreens },
+    { data: scheduleGroups },
+  ] = await Promise.all([
+    schedulePlaylistIds.length > 0
+      ? supabase.from("playlists").select("id, name").in("id", schedulePlaylistIds)
+      : { data: [] },
+    scheduleScreenIds.length > 0
+      ? supabase.from("screens").select("id, name").in("id", scheduleScreenIds)
+      : { data: [] },
+    scheduleGroupIds.length > 0
+      ? supabase.from("screen_groups").select("id, name").in("id", scheduleGroupIds)
+      : { data: [] },
+  ]);
+
+  const schedulePlaylistMap = new Map<string, any>((schedulePlaylists ?? []).map((p: any) => [p.id, p]));
+  const scheduleScreenMap = new Map<string, any>((scheduleScreens ?? []).map((s: any) => [s.id, s]));
+  const scheduleGroupMap = new Map<string, any>((scheduleGroups ?? []).map((g: any) => [g.id, g]));
+
+  const schedules = (schedulesRaw ?? []).map((s: any) => ({
+    ...s,
+    playlists: schedulePlaylistMap.has(s.playlist_id) ? schedulePlaylistMap.get(s.playlist_id) : null,
+    screens: scheduleScreenMap.has(s.screen_id) ? scheduleScreenMap.get(s.screen_id) : null,
+    screen_groups: scheduleGroupMap.has(s.group_id) ? scheduleGroupMap.get(s.group_id) : null,
+  }));
 
   const offlineScreens = (totalScreens ?? 0) - (onlineScreens ?? 0);
   const totalImpressions = allPlayLogs?.length ?? 0;

@@ -83,7 +83,7 @@ export default async function FranchisePage() {
               .from("screens")
               .select("id")
               .eq("franchise_id", franchiseId)
-              .then(({ data }) => data?.map(s => s.id) || [])
+              .then(({ data }: { data: { id: string }[] | null }) => data?.map(s => s.id) || [])
           )
       : Promise.resolve({ count: 0, error: null }),
     
@@ -151,7 +151,7 @@ export default async function FranchisePage() {
         .eq("franchise_id", franchiseId)
     : { data: [] };
 
-  const screenIds = (franchiseScreens || []).map((s) => s.id);
+  const screenIds = (franchiseScreens || []).map((s: { id: string }) => s.id);
 
   const { data: recentSchedules } = screenIds.length > 0
     ? await supabase
@@ -172,21 +172,21 @@ export default async function FranchisePage() {
   };
 
   const allActivities: ActivityItem[] = [
-    ...(recentScreens || []).map((s) => ({
+    ...(recentScreens || []).map((s: { id: string; name: string; created_at: string }) => ({
       id: `screen-${s.id}`,
       type: "screen" as const,
       title: "New screen added",
       entityName: s.name,
       createdAt: s.created_at,
     })),
-    ...(recentAds || []).map((target) => ({
+    ...(recentAds || []).map((target: { id: string; created_at: string; ads?: { id: string; name: string; created_at: string } | null }) => ({
       id: `ad-${target.id}`,
       type: "ad" as const,
       title: "Advertisement submitted",
       entityName: (target.ads as any)?.name || "Unknown Ad",
       createdAt: target.created_at,
     })),
-    ...(recentSchedules || []).map((schedule) => ({
+    ...(recentSchedules || []).map((schedule: { id: string; name: string; created_at: string; screens?: { name: string } | null }) => ({
       id: `schedule-${schedule.id}`,
       type: "schedule" as const,
       title: "Schedule created",
@@ -213,7 +213,7 @@ export default async function FranchisePage() {
         .limit(10)
     : { data: [] };
 
-  const pendingApprovals = (pendingApprovalsData || []).map((target) => ({
+  const pendingApprovals = (pendingApprovalsData || []).map((target: { id: string; created_at: string; ads?: { id: string; name: string; created_at: string } | null; advertisers?: { id: string; name: string } | null }) => ({
     id: target.id,
     adId: (target.ads as any)?.id || "",
     name: (target.ads as any)?.name || "Unknown Ad",
@@ -232,7 +232,7 @@ export default async function FranchisePage() {
         .limit(10)
     : { data: [] };
 
-  const myAdRequests = (myAdRequestsData || []).map((ad) => ({
+  const myAdRequests = (myAdRequestsData || []).map((ad: { id: string; name: string; status: string; created_at: string; media_items?: { name: string } | null }) => ({
     id: ad.id,
     name: ad.name,
     media_name: (ad.media_items as any)?.name || null,
@@ -360,7 +360,7 @@ export default async function FranchisePage() {
         action={
           franchiseId ? (
             <CreateAdDialog
-              mediaItems={(mediaItems || []).map((item) => ({
+              mediaItems={(mediaItems || []).map((item: { id: string; name: string; type: string }) => ({
                 id: item.id,
                 name: item.name,
                 type: item.type as "image" | "video",

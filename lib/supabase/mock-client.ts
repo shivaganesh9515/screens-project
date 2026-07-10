@@ -207,7 +207,6 @@ function getTableData(tableName: string): any[] | null {
   const tableMap: Record<string, string> = {
     orgs: "orgs",
     org_members: "org_members",
-    franchises: "franchises",
     screen_groups: "screen_groups",
     screens: "screens",
     media_items: "media_items",

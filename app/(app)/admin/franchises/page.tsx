@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Building2 } from "lucide-react";
 import { SectionCard } from "@/components/ui/section-card";
 import { FranchiseTable } from "./franchise-table";
 import { CreateFranchiseDialog } from "./create-franchise-dialog";

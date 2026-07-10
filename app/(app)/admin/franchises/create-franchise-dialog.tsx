@@ -89,7 +89,7 @@ export function CreateFranchiseDialog({ managers }: CreateFranchiseDialogProps) 
           </div>
           <div className="space-y-2">
             <Label>Assign Manager (Optional)</Label>
-            <Select value={managedBy} onValueChange={setManagedBy}>
+            <Select value={managedBy} onValueChange={(value) => setManagedBy(value ?? "")}>
               <SelectTrigger className="h-11 rounded-xl">
                 <SelectValue placeholder="Select a manager" />
               </SelectTrigger>

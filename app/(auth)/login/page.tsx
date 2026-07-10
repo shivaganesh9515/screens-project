@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,53 +15,45 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-      return;
-    }
-
-    if (data?.session) {
-      await fetch("/api/auth/onboard", {
+    try {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
-        headers: {
-          "Authorization": `Bearer ${data.session.access_token}`,
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Login failed");
+        setLoading(false);
+        return;
+      }
+
+      // Determine redirect path based on role
+      const role = data.user.role;
+      let redirectPath = "/overview";
+
+      if (role === "main_admin" || role === "admin" || role === "editor" || role === "viewer") {
+        redirectPath = "/admin";
+      } else if (role === "franchise_manager") {
+        redirectPath = "/franchise";
+      } else if (role === "advertiser") {
+        redirectPath = "/advertiser";
+      }
+
+      router.push(redirectPath);
+      router.refresh();
+    } catch (err) {
+      setError("Network error. Please try again.");
+      setLoading(false);
     }
-
-    const { data: member } = await supabase
-      .from("org_members")
-      .select("role")
-      .eq("user_id", data.user.id)
-      .single();
-
-    const role = member?.role;
-    let redirectPath = "/overview";
-
-    if (role === "main_admin" || role === "admin" || role === "editor" || role === "viewer") {
-      redirectPath = "/admin";
-    } else if (role === "franchise_manager" || role === "franchise") {
-      redirectPath = "/franchise";
-    } else if (role === "advertiser") {
-      redirectPath = "/advertiser";
-    }
-
-    router.push(redirectPath);
-    router.refresh();
   };
 
   return (

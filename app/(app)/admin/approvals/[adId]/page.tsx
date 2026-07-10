@@ -83,7 +83,7 @@ export default async function ApprovalPage({ params }: ApprovalPageProps) {
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Target Franchises</p>
               <p className="mt-1 text-sm text-foreground">
                 {ad.ad_franchise_targets
-                  ?.map((t) => t.franchises?.name)
+                  ?.map((t: { franchises?: { name: string | null } | null }) => t.franchises?.name)
                   .filter(Boolean)
                   .join(", ") ?? "None"}
               </p>

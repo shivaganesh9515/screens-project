@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     }
 
     const { supabase, user } = await requireAuth();
-    const { name, media_item_id, franchise_id } = parsed.data;
+    const { name, media_item_id, franchise_id, screen_type, orientation } = parsed.data;
 
     // Verify the user manages this franchise
     const { data: franchise, error: franchiseError } = await supabase
@@ -30,13 +30,15 @@ export async function POST(request: Request) {
       throw new ApiError(403, "FORBIDDEN", "You do not manage this franchise");
     }
 
-    // Create the ad with submitted_by_franchise_id
+    // Create the ad with submitted_by_franchise_id + screen_type + orientation
     const { data: ad, error: adError } = await supabase
       .from("ads")
       .insert({
         name,
         org_id: franchise.org_id,
         media_item_id: media_item_id || null,
+        screen_type: screen_type || null,
+        orientation: orientation || null,
         submitted_by_franchise_id: franchise_id,
         status: "pending",
       })

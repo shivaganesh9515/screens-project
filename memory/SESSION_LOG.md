@@ -6,6 +6,65 @@
 
 ---
 
+## Session 10 — July 10, 2026
+
+**AI Model:** deepseek/deepseek-v4-flash (via Freebuff/Codebuff)  
+**Branch:** `ashwanth`
+
+### What was done
+- **Phase 1 — Ad Creation Fields (P0)** — Completed the full end-to-end implementation:
+  - **supabase/migrations/00001_schema.sql**: Added `screen_type TEXT` (CHECK: static/bus/auto) and `orientation TEXT` (CHECK: landscape/portrait) columns to the `ads` table
+  - **lib/api/validation.ts**: Updated `CreateFranchiseAdSchema` to accept optional `screen_type` and `orientation` fields (Zod enums)
+  - **app/api/ads/franchise/route.ts**: Updated POST handler to destructure and save `screen_type` + `orientation` in the INSERT
+  - **app/(app)/franchise/create-ad-dialog.tsx**: Added screen type selector (Static/Bus/Auto) and orientation selector (Landscape/Portrait) using the same UI pattern as the advertiser dialog. Sends new fields in API request body. State resets on successful submit.
+- **Build verified** — `npx tsc --noEmit` passes with zero errors
+- **Code reviewed** — No issues found, all changes are consistent end-to-end
+
+### State at end of session
+- Branch `ashwanth` still has uncommitted changes (now +4 more files modified)
+- Both advertiser and franchise create-ad dialogs now have screen_type + orientation selectors
+- Both API paths (direct Supabase insert for advertiser, /api/ads/franchise for franchise) save these fields
+- Both the local SQLite schema and the Supabase migration have the columns
+
+### Next session should
+- Push the `ashwanth` branch or commit changes
+- Continue with remaining P0/P1 priorities
+
+---
+
+## Session 9 — July 10, 2026
+
+**AI Model:** deepseek/deepseek-v4-flash (via Freebuff/Codebuff)  
+**Branch:** `ashwanth`
+
+### What was done
+- **Merged `origin/master` into `ashwanth`** — brought in all latest changes from all team members (sessions 4-8 work: API audit, CRUD endpoints, P1/P2 fixes, local Supabase setup, franchise/advertiser dashboards, media orientation/live-video/repeat-count/screensaver, screen UI rework, admin/franchise dashboards)
+- **Installed missing dependencies** — `leaflet@^1.9.4` and `@types/leaflet@^1.9.21` (needed by manaswini's overview-map component)
+- **Fixed TypeScript build errors** (14 files changed):
+  - Added `"use client"` to `hooks/useCountUp.tsx` (used by Server Component)
+  - Added inline type annotations for implicit-`any` parameters across `admin/approvals/[adId]/page.tsx`, `admin/page.tsx`, `admin/franchises/franchise-actions.ts`, `franchise/page.tsx`, `app/api/play-logs/route.ts`, `app/api/playlists/route.ts`, `app/api/ads/route.ts`
+  - Fixed `Select.onValueChange` type mismatches in `create-franchise-dialog.tsx`, `edit-franchise-dialog.tsx`, `create-ad-dialog.tsx` (Dispatch type not matching callback signature)
+  - Removed duplicate `franchises` key in `lib/supabase/mock-client.ts`
+  - Added missing `id` fields and nested join data to `lib/supabase/mock-data.ts` (ads.advertisers, ads.ad_franchise_targets, ad_franchise_targets.id)
+- **Build verified** — `npm run build` passes with zero errors
+
+### State at end of session
+- Branch `ashwanth` is at `2175bcb` (same as `origin/master`)
+- All team changes successfully merged in
+- Local branch is **70 commits ahead** of `origin/ashwanth` — ready to push back
+- Build passes cleanly — TypeScript + prerendering both succeed
+
+### Problems encountered
+- Stale `.next` cache caused phantom module-not-found error for deleted `app/api/media/upload/route.ts` (cleared `.next` to resolve)
+- Pre-existing implicit-any errors across merged code from multiple team members
+- Runtime prerender error on `/admin` page because mock data didn't have nested structures expected by `PendingApprovalsTable` component
+
+### Next session should
+- Push the merged `ashwanth` branch back to `origin/ashwanth`
+- Continue with P0 priorities: build player playback, or start ashwanth's own migration work
+
+---
+
 ## Session 8 — July 9, 2026
 
 **AI Model:** opencode/mimo-v2-free  

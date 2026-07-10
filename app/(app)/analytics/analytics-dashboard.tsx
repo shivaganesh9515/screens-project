@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AreaChart,
@@ -25,7 +25,6 @@ import {
   MonitorSmartphone,
   Play,
   Clock,
-  Download,
   TrendingUp,
   TrendingDown,
   CalendarDays,
@@ -35,8 +34,6 @@ import {
   DownloadCloud,
   Table2,
   PieChart as PieChartIcon,
-  Wifi,
-  WifiOff,
   Megaphone,
   Activity,
 } from "lucide-react";
@@ -76,7 +73,7 @@ const COLORS = {
 export function AnalyticsDashboard({
   playLogs,
   screens,
-  mediaItems,
+  mediaItems: _mediaItems,
   statusLogs = [],
   ads = [],
   advertisers = [],
@@ -93,6 +90,8 @@ export function AnalyticsDashboard({
   const [dateRange, setDateRange] = useState(searchParams.get("range") ?? "90d");
   const [screenFilter, setScreenFilter] = useState("all");
   const [chartView, setChartView] = useState<"overview" | "breakdown" | "adPerformance">("overview");
+  // Capture once to avoid calling impure Date.now() during render
+  const [now] = useState(() => Date.now());
 
   const handleDateRangeChange = useCallback((value: string) => {
     setDateRange(value);
@@ -103,7 +102,6 @@ export function AnalyticsDashboard({
 
   // Filter by date range
   const dateFiltered = useMemo(() => {
-    const now = Date.now();
     const ranges: Record<string, number> = {
       "7d": 7 * 86400000,
       "30d": 30 * 86400000,
@@ -112,7 +110,7 @@ export function AnalyticsDashboard({
     };
     const cutoff = now - (ranges[dateRange] ?? Infinity);
     return playLogs.filter((log) => new Date(log.started_at).getTime() > cutoff);
-  }, [playLogs, dateRange]);
+  }, [playLogs, dateRange, now]);
 
   // Filter by screen
   const filtered = useMemo(() => {
@@ -133,7 +131,7 @@ export function AnalyticsDashboard({
     const days: Record<string, { plays: number; duration: number; date: string; label: string }> = {};
     const range = dateRange === "7d" ? 7 : dateRange === "30d" ? 30 : dateRange === "90d" ? 90 : 30;
     for (let d = range - 1; d >= 0; d--) {
-      const date = new Date(Date.now() - d * 86400000);
+      const date = new Date(now - d * 86400000);
       const key = date.toISOString().slice(0, 10);
       days[key] = {
         plays: 0,
@@ -198,7 +196,6 @@ export function AnalyticsDashboard({
     }
 
     // For each screen, and for each time segment between log entries, compute online vs offline time
-    const now = Date.now();
     for (const [screenId, logs] of Object.entries(logsByScreen)) {
       const screen = screens.find((s) => s.id === screenId);
       const screenName = screen?.name ?? "Unknown";
@@ -236,7 +233,7 @@ export function AnalyticsDashboard({
     // Compute daily online/offline ratio
     const daily: Record<string, { date: string; label: string; online: number; offline: number; total: number }> = {};
     for (let d = range - 1; d >= 0; d--) {
-      const date = new Date(Date.now() - d * 86400000);
+      const date = new Date(now - d * 86400000);
       const key = date.toISOString().slice(0, 10);
       daily[key] = {
         date: key,
@@ -273,7 +270,7 @@ export function AnalyticsDashboard({
     }));
 
     return { perScreen, dailyTrend };
-  }, [statusLogs, screens, dateRange]);
+  }, [statusLogs, screens, dateRange, now]);
 
   // ---- Task 2: Ad Play Analytics ----
   const adPlayData = useMemo(() => {
@@ -347,6 +344,33 @@ export function AnalyticsDashboard({
     }));
   }, [filtered, screens]);
 
+  // Previous period comparison (for trends)
+  const prevPeriodStats = useMemo(() => {
+    const range = dateRange === "7d" ? 7 : dateRange === "30d" ? 30 : dateRange === "90d" ? 90 : 30;
+    if (range === Infinity) return { impressions: 0, previousImpressions: 0 };
+
+    const currentCutoff = now - range * 86400000;
+    const prevCutoff = now - range * 2 * 86400000;
+
+    const current = playLogs.filter((l) => new Date(l.started_at).getTime() > currentCutoff).length;
+    const previous = playLogs.filter(
+      (l) =>
+        new Date(l.started_at).getTime() > prevCutoff &&
+        new Date(l.started_at).getTime() <= currentCutoff
+    ).length;
+
+    return { impressions: current, previousImpressions: previous };
+  }, [playLogs, dateRange, now]);
+
+  const impressionChange =
+    prevPeriodStats.previousImpressions > 0
+      ? Math.round(
+          ((prevPeriodStats.impressions - prevPeriodStats.previousImpressions) /
+            prevPeriodStats.previousImpressions) *
+            100
+        )
+      : 0;
+
   // Export CSV
   const exportCSV = () => {
     const headers = "Media,Media Type,Screen,Started,Duration (s)\n";
@@ -367,33 +391,7 @@ export function AnalyticsDashboard({
     URL.revokeObjectURL(url);
   };
 
-  // Previous period comparison (for trends)
-  const prevPeriodStats = useMemo(() => {
-    const now = Date.now();
-    const range = dateRange === "7d" ? 7 : dateRange === "30d" ? 30 : dateRange === "90d" ? 90 : 30;
-    if (range === Infinity) return { impressions: 0, previousImpressions: 0 };
 
-    const currentCutoff = now - range * 86400000;
-    const prevCutoff = now - range * 2 * 86400000;
-
-    const current = playLogs.filter((l) => new Date(l.started_at).getTime() > currentCutoff).length;
-    const previous = playLogs.filter(
-      (l) =>
-        new Date(l.started_at).getTime() > prevCutoff &&
-        new Date(l.started_at).getTime() <= currentCutoff
-    ).length;
-
-    return { impressions: current, previousImpressions: previous };
-  }, [playLogs, dateRange]);
-
-  const impressionChange =
-    prevPeriodStats.previousImpressions > 0
-      ? Math.round(
-          ((prevPeriodStats.impressions - prevPeriodStats.previousImpressions) /
-            prevPeriodStats.previousImpressions) *
-            100
-        )
-      : 0;
 
   const stats = [
     {

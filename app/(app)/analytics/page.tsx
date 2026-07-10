@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { fetchEnrichedPlayLogs } from "@/lib/db/helpers";
 import { AnalyticsDashboard } from "./analytics-dashboard";
 
 export default async function AnalyticsPage({
@@ -42,21 +43,12 @@ export default async function AnalyticsPage({
   const screens = screensResult.data ?? [];
   const screenIds = screens.map((s: any) => s.id);
 
-  // Fetch play logs with server-side date filter
-  let playLogsQuery = supabase
-    .from("play_logs")
-    .select("*, screens!inner(name), media_items(name, type), ads!left(name)")
-    .in("screen_id", screenIds)
-    .order("started_at", { ascending: false })
-    .limit(2000);
-
-  if (sinceDate) {
-    playLogsQuery = playLogsQuery.gte("started_at", sinceDate);
-  }
-
-  const playLogsResult = screenIds.length > 0
-    ? await playLogsQuery
-    : { data: [] };
+  // Fetch enriched play logs with related data (screens, media_items, ads)
+  const playLogsResult = await fetchEnrichedPlayLogs({
+    screenIds,
+    sinceDate,
+    limit: 2000,
+  });
 
   // Fetch media items
   const mediaResult = await supabase
@@ -75,13 +67,26 @@ export default async function AnalyticsPage({
     : { data: [] };
 
   // ---- Task 2: Ad Play Counts ----
-  // Fetch ads belonging to this org
+  // Fetch ads belonging to this org (flat, no nested joins)
   const adsResult = await supabase
     .from("ads")
-    .select("id, name, status, advertiser_id, media_items(name, type)")
+    .select("id, name, status, advertiser_id, media_item_id")
     .eq("org_id", orgId);
 
-  const ads = adsResult.data ?? [];
+  const adsRaw = adsResult.data ?? [];
+
+  // Enrich ads with media_items name/type
+  const { data: mediaForAds } = await supabase
+    .from("media_items")
+    .select("id, name, type");
+  const mediaById = new Map((mediaForAds ?? []).map((m: any) => [m.id, m]));
+
+  const ads = adsRaw.map((ad: any) => ({
+    ...ad,
+    media_items: ad.media_item_id && mediaById.has(ad.media_item_id)
+      ? mediaById.get(ad.media_item_id)
+      : null,
+  }));
 
   // Also fetch advertisers for reference
   const advertisersResult = await supabase

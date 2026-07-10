@@ -34,7 +34,7 @@ export async function POST(
 
     let franchiseId: string;
 
-    if (member.role === "admin") {
+    if (member.role === "admin" || member.role === "main_admin") {
       if (!ad.submitted_by_franchise_id) {
         throw new ApiError(400, "INVALID_AD", "Ad was not submitted by a franchise");
       }

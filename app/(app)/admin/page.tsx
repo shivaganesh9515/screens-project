@@ -116,28 +116,28 @@ export default async function AdminPage() {
   };
 
   const allActivities: ActivityItem[] = [
-    ...(recentFranchises ?? []).map((f) => ({
+    ...(recentFranchises ?? []).map((f: { id: string; name: string; created_at: string }) => ({
       id: `franchise-${f.id}`,
       type: "franchise" as const,
       title: "New franchise created",
       entityName: f.name,
       createdAt: f.created_at,
     })),
-    ...(recentAdvertisers ?? []).map((a) => ({
+    ...(recentAdvertisers ?? []).map((a: { id: string; name: string; created_at: string }) => ({
       id: `advertiser-${a.id}`,
       type: "advertiser" as const,
       title: "New advertiser registered",
       entityName: a.name,
       createdAt: a.created_at,
     })),
-    ...(recentScreens ?? []).map((s) => ({
+    ...(recentScreens ?? []).map((s: { id: string; name: string; created_at: string }) => ({
       id: `screen-${s.id}`,
       type: "screen" as const,
       title: "New screen added",
       entityName: s.name,
       createdAt: s.created_at,
     })),
-    ...(recentAds ?? []).map((ad) => ({
+    ...(recentAds ?? []).map((ad: { id: string; name: string; created_at: string }) => ({
       id: `ad-${ad.id}`,
       type: "ad" as const,
       title: "New ad submitted",

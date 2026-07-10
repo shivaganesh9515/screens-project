@@ -123,7 +123,7 @@ export async function POST(request: Request) {
       .eq("org_id", advertiser.org_id)
       .in("id", franchise_ids);
 
-    const validIds = new Set(validFranchises?.map((f) => f.id) ?? []);
+    const validIds = new Set(validFranchises?.map((f: { id: string }) => f.id) ?? []);
     const invalidFranchises = franchise_ids.filter((id) => !validIds.has(id));
 
     if (invalidFranchises.length > 0) {
