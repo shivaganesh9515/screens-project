@@ -78,7 +78,7 @@ function ConnectivityIcon({ type }: { type: string | null }) {
   );
 }
 
-export function ScreensTable({ screens, groups, orgId }: { screens: Screen[]; groups: Group[]; orgId: string }) {
+export function ScreensTable({ screens, groups, orgId, franchiseName }: { screens: Screen[]; groups: Group[]; orgId: string; franchiseName?: string; }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "online" | "offline">("all");
   const [typeFilter, setTypeFilter] = useState<"all" | "static" | "bus" | "auto">("all");
@@ -175,6 +175,7 @@ export function ScreensTable({ screens, groups, orgId }: { screens: Screen[]; gr
       </div>
 
       <div className="rounded-2xl border border-border bg-card shadow-card overflow-hidden">
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30 hover:bg-muted/30">
@@ -195,8 +196,17 @@ export function ScreensTable({ screens, groups, orgId }: { screens: Screen[]; gr
               <TableRow>
                 <TableCell colSpan={10} className="py-20 text-center">
                   <MonitorSmartphone className="mx-auto mb-3 h-10 w-10 text-muted-foreground/30" />
-                  <p className="text-sm font-medium text-muted-foreground">No screens found</p>
-                  <p className="text-xs text-muted-foreground/60">{search ? "Try a different search term" : "Add a screen to get started"}</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {franchiseName ? "No screens in this territory" : "No screens found"}
+                  </p>
+                  <p className="text-xs text-muted-foreground/60">
+                    {franchiseName
+                      ? `The ${franchiseName} territory has no screens registered yet.`
+                      : search
+                        ? "Try a different search term"
+                        : "Add a screen to get started"
+                    }
+                  </p>
                 </TableCell>
               </TableRow>
             ) : (
@@ -260,6 +270,7 @@ export function ScreensTable({ screens, groups, orgId }: { screens: Screen[]; gr
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
     </div>
   );

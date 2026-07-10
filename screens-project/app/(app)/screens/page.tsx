@@ -24,14 +24,16 @@ export default async function ScreensPage() {
 
   // Franchise scoping: franchise managers only see screens in their territory
   let franchiseIdFilter: string | null = null;
+  let franchiseName: string | undefined;
   if (role === "franchise_manager") {
     const { data: franchise } = await supabase
       .from("franchises")
-      .select("id")
+      .select("id, name")
       .eq("managed_by", user.id)
       .single();
     // If no franchise found, filter by impossible ID so they see nothing
     franchiseIdFilter = franchise?.id ?? "00000000-0000-0000-0000-000000000000";
+    franchiseName = franchise?.name;
   }
 
   // Build screens query with optional franchise filter
@@ -74,6 +76,7 @@ export default async function ScreensPage() {
             screens={screensResult.data ?? []}
             groups={groupsResult.data ?? []}
             orgId={orgId}
+            franchiseName={franchiseName}
           />
         </div>
         <div>
