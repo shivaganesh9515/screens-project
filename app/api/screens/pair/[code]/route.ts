@@ -36,6 +36,10 @@ export async function PUT(
       return NextResponse.json({ error: "Pairing code has expired" }, { status: 410 });
     }
 
+    // Generate a screen token if unique_number is not already set
+    const screenToken = screen.unique_number ||
+      `SCR-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
     const { data: updated, error: updateError } = await supabase
       .from("screens")
       .update({
@@ -43,6 +47,7 @@ export async function PUT(
         paired_at: new Date().toISOString(),
         pairing_code: null,
         pairing_expires_at: null,
+        unique_number: screenToken,
       })
       .eq("id", screen.id)
       .select()

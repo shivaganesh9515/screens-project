@@ -62,8 +62,8 @@ CREATE INDEX ad_franchise_targets_franchise_id_idx ON ad_franchise_targets(franc
 CREATE TABLE screen_locations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   screen_id UUID REFERENCES screens(id) ON DELETE CASCADE,
-  lat DOUBLE PRECISION NOT NULL,
-  lng DOUBLE PRECISION NOT NULL,
+  latitude DOUBLE PRECISION NOT NULL,
+  longitude DOUBLE PRECISION NOT NULL,
   recorded_at TIMESTAMPTZ DEFAULT NOW()
 );
 

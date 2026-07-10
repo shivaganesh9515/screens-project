@@ -337,14 +337,35 @@ class MockSupabaseClient {
     return new MockQueryBuilder(table);
   }
 
+  // Track created channels for removeChannel support
+  private channels: any[] = [];
+
   channel(_name: string) {
-    return {
+    const channelObj = {
+      _name,
+      _onCallbacks: Array<{ event: string; config: any; callback: Function }>(),
+      on: (event: string, config: any, callback?: Function) => {
+        channelObj._onCallbacks.push({ event, config, callback: callback ?? (() => {}) });
+        return channelObj; // Enable chaining
+      },
       subscribe: (callback?: (status: string) => void) => {
         if (callback) setTimeout(() => callback("SUBSCRIBED"), 0);
-        return { unsubscribe: () => {} };
+        return channelObj;
+      },
+      unsubscribe: () => {
+        // no-op in mock
       },
       send: (_payload: any) => {},
     };
+    this.channels.push(channelObj);
+    return channelObj;
+  }
+
+  removeChannel(channel: any) {
+    const idx = this.channels.indexOf(channel);
+    if (idx !== -1) {
+      this.channels.splice(idx, 1);
+    }
   }
 
   rpc(_fn: string, _params?: any) {

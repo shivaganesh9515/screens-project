@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
 import { CheckCircle, Clock } from "lucide-react";
 
 interface PendingAd {
@@ -20,7 +21,7 @@ interface PendingAd {
   advertisers: { name: string } | null;
   ad_franchise_targets: {
     franchises: { name: string } | null;
-  }[];
+  }[] | null;
 }
 
 interface PendingApprovalsTableProps {
@@ -76,8 +77,8 @@ export function PendingApprovalsTable({ ads }: PendingApprovalsTableProps) {
               </TableCell>
               <TableCell>
                 <div className="flex flex-wrap gap-1">
-                  {ad.ad_franchise_targets.length > 0 ? (
-                    ad.ad_franchise_targets.map((target, idx) => (
+                  {(ad.ad_franchise_targets ?? []).length > 0 ? (
+                    (ad.ad_franchise_targets ?? []).map((target, idx) => (
                       <Badge
                         key={idx}
                         variant="secondary"
@@ -92,7 +93,7 @@ export function PendingApprovalsTable({ ads }: PendingApprovalsTableProps) {
                 </div>
               </TableCell>
               <TableCell className="text-sm text-muted-foreground">
-                {new Date(ad.created_at).toLocaleDateString()}
+                {format(new Date(ad.created_at), "MMM d, yyyy")}
               </TableCell>
               <TableCell>
                 <Badge

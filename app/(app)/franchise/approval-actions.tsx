@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -138,7 +139,7 @@ export function ApprovalActions({ pendingAds, franchiseId }: ApprovalActionsProp
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {ad?.created_at
-                    ? new Date(ad.created_at).toLocaleDateString()
+                    ? format(new Date(ad.created_at), "MMM d, yyyy")
                     : "—"}
                 </TableCell>
                 <TableCell>

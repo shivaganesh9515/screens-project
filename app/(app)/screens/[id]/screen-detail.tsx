@@ -36,8 +36,17 @@ interface Screen {
   connectivity_type: string | null;
   lat: number | null;
   lng: number | null;
+  latitude: number | null;
+  longitude: number | null;
   screen_groups: { name: string } | null;
   franchises: { name: string } | null;
+}
+
+interface GpsLocation {
+  latitude: number;
+  longitude: number;
+  recorded_at: string;
+  accuracy?: number;
 }
 
 interface Group { id: string; name: string; }
@@ -49,7 +58,13 @@ const screenTypeMeta: Record<string, { icon: typeof MonitorSmartphone; label: st
   auto: { icon: Car, label: "Auto", color: "bg-purple-50 text-purple-600" },
 };
 
-export function ScreenDetail({ screen, groups, schedules, orgId }: { screen: Screen; groups: Group[]; schedules: Schedule[]; orgId: string }) {
+export function ScreenDetail({ screen, groups, schedules, orgId, latestGpsLocation }: {
+  screen: Screen;
+  groups: Group[];
+  schedules: Schedule[];
+  orgId: string;
+  latestGpsLocation?: GpsLocation | null;
+}) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(screen.name);
   const [groupId, setGroupId] = useState(screen.group_id ?? "");
@@ -58,8 +73,11 @@ export function ScreenDetail({ screen, groups, schedules, orgId }: { screen: Scr
   const [sizeType, setSizeType] = useState(screen.size_type ?? "");
   const [screenType, setScreenType] = useState<"static" | "bus" | "auto">((screen.screen_type as "static" | "bus" | "auto") || "static");
   const [connectivityType, setConnectivityType] = useState<"sim" | "wifi">((screen.connectivity_type as "sim" | "wifi") || "wifi");
-  const [lat, setLat] = useState(screen.lat?.toString() ?? "");
-  const [lng, setLng] = useState(screen.lng?.toString() ?? "");
+  // Use latitude/longitude (the canonical columns); fall back to lat/lng for backward compat
+  const canonicalLat = screen.latitude ?? screen.lat;
+  const canonicalLng = screen.longitude ?? screen.lng;
+  const [lat, setLat] = useState(canonicalLat?.toString() ?? "");
+  const [lng, setLng] = useState(canonicalLng?.toString() ?? "");
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
   const router = useRouter();
@@ -79,7 +97,15 @@ export function ScreenDetail({ screen, groups, schedules, orgId }: { screen: Scr
       size_type: sizeType || null,
       screen_type: screenType,
       connectivity_type: connectivityType,
-      ...(showLocation && lat && lng ? { lat: parseFloat(lat), lng: parseFloat(lng) } : { lat: null, lng: null }),
+      ...(showLocation && lat && lng
+        ? {
+            // Write to both column sets during migration period
+            latitude: parseFloat(lat),
+            longitude: parseFloat(lng),
+            lat: parseFloat(lat),
+            lng: parseFloat(lng),
+          }
+        : { latitude: null, longitude: null, lat: null, lng: null }),
     };
 
     const { error } = await supabase.from("screens").update(updates).eq("id", screen.id);
@@ -154,8 +180,8 @@ export function ScreenDetail({ screen, groups, schedules, orgId }: { screen: Scr
                       setSizeType(screen.size_type ?? "");
                       setScreenType((screen.screen_type as "static" | "bus" | "auto") || "static");
                       setConnectivityType((screen.connectivity_type as "sim" | "wifi") || "wifi");
-                      setLat(screen.lat?.toString() ?? "");
-                      setLng(screen.lng?.toString() ?? "");
+                      setLat(canonicalLat?.toString() ?? "");
+                      setLng(canonicalLng?.toString() ?? "");
                     }} className="rounded-xl"><X className="mr-1 h-4 w-4" /> Cancel</Button>
                   </div>
                 ) : (
@@ -340,7 +366,7 @@ export function ScreenDetail({ screen, groups, schedules, orgId }: { screen: Scr
                 )}>
                   <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-2">
                     <MapPin className="h-3.5 w-3.5" />
-                    {showLocation ? "GPS Coordinates" : "GPS Location"}
+                    {showLocation ? "GPS Coordinates" :                   "GPS Location"}
                     {!showLocation && (
                       <Badge variant="outline" className="rounded-full text-[10px] px-2 py-0 border-muted-foreground/20 text-muted-foreground/60">
                         Auto-tracked
@@ -358,20 +384,26 @@ export function ScreenDetail({ screen, groups, schedules, orgId }: { screen: Scr
                         <Input id="detail-lng" type="number" step="any" placeholder="78.4867" value={lng} onChange={(e) => setLng(e.target.value)} className="h-9 rounded-lg" />
                       </div>
                     </div>
-                  ) : (
-                    <div>
-                      {showLocation && (screen.lat !== null || screen.lng !== null) ? (
-                        <p className="text-sm font-medium text-foreground">
-                          {screen.lat}, {screen.lng}
-                        </p>
-                      ) : showLocation ? (
-                        <p className="text-sm text-muted-foreground">—</p>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">
-                          Location tracked live via GPS for {screenType === "bus" ? "Bus" : "Auto"} screens
-                        </p>
-                      )}
+                  ) : showLocation && (canonicalLat !== null || canonicalLng !== null) ? (
+                    <p className="text-sm font-medium text-foreground">
+                      {canonicalLat}, {canonicalLng}
+                    </p>
+                  ) : showLocation ? (
+                    <p className="text-sm text-muted-foreground">—</p>
+                  ) : latestGpsLocation ? (
+                    <div className="space-y-1.5">
+                      <p className="text-sm font-medium text-foreground">
+                        {latestGpsLocation.latitude.toFixed(6)}, {latestGpsLocation.longitude.toFixed(6)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Updated {new Date(latestGpsLocation.recorded_at).toLocaleString()}
+                        {latestGpsLocation.accuracy != null && ` — ±${latestGpsLocation.accuracy}m`}
+                      </p>
                     </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      No GPS data yet — location will appear once the screen sends a heartbeat
+                    </p>
                   )}
                 </div>
               </div>

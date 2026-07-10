@@ -47,6 +47,8 @@ function GradientAreaChart({
     [yKey]: { label: yKey, color },
   } satisfies ChartConfig
 
+  const clipId = React.useId()
+
   return (
     <div className={cn("w-full overflow-hidden", className)} style={{ height }}>
       <ChartContainer config={chartConfig}>
@@ -56,6 +58,9 @@ function GradientAreaChart({
               <stop offset="0%" stopColor={color} stopOpacity={0.25} />
               <stop offset="95%" stopColor={color} stopOpacity={0.01} />
             </linearGradient>
+            <clipPath id={`${clipId}-chart-clip`}>
+              <rect x="0" y="8" width="100%" height="100%" />
+            </clipPath>
           </defs>
           {showGrid && (
             <CartesianGrid
@@ -82,13 +87,15 @@ function GradientAreaChart({
           {showTooltip && (
             <ChartTooltip content={<ChartTooltipContent />} />
           )}
-          <Area
-            type="monotone"
-            dataKey={yKey}
-            stroke={color}
-            strokeWidth={2}
-            fill={`url(#${gradientId})`}
-          />
+          <g clipPath={`url(#${clipId}-chart-clip)`}>
+            <Area
+              type="monotone"
+              dataKey={yKey}
+              stroke={color}
+              strokeWidth={2}
+              fill={`url(#${gradientId})`}
+            />
+          </g>
           {children}
         </AreaChart>
       </ChartContainer>

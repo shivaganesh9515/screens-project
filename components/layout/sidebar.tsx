@@ -17,10 +17,33 @@ import {
   Menu,
   X,
   Megaphone,
+  Building2,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 
-const menuItems = [
+const adminMenuItems = [
+  { href: "/admin", label: "Admin Dashboard", icon: LayoutDashboard },
+  { href: "/screens", label: "Screens", icon: MonitorSmartphone },
+  { href: "/media", label: "Media", icon: Image },
+  { href: "/playlists", label: "Playlists", icon: Play },
+  { href: "/templates", label: "Templates", icon: Layout },
+  { href: "/schedule", label: "Schedule", icon: Calendar },
+  { href: "/admin/franchises", label: "Franchises", icon: Building2 },
+  { href: "/advertiser", label: "Advertiser", icon: Megaphone },
+];
+
+const franchiseMenuItems = [
+  { href: "/franchise", label: "Franchise Dashboard", icon: Building2 },
+  { href: "/overview", label: "Overview", icon: LayoutDashboard },
+  { href: "/screens", label: "Screens", icon: MonitorSmartphone },
+  { href: "/media", label: "Media", icon: Image },
+  { href: "/playlists", label: "Playlists", icon: Play },
+  { href: "/templates", label: "Templates", icon: Layout },
+  { href: "/schedule", label: "Schedule", icon: Calendar },
+];
+
+const advertiserMenuItems = [
   { href: "/overview", label: "Overview", icon: LayoutDashboard },
   { href: "/screens", label: "Screens", icon: MonitorSmartphone },
   { href: "/media", label: "Media", icon: Image },
@@ -35,10 +58,41 @@ const systemItems = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
+const adminRoles = ["main_admin", "admin", "editor", "viewer"];
+const franchiseRoles = ["franchise_manager", "franchise"];
+
 export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const supabase = createClient();
+
+  useEffect(() => {
+    const getUserRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: member } = await supabase
+          .from("org_members")
+          .select("role")
+          .eq("user_id", user.id)
+          .single();
+        if (member?.role) {
+          setUserRole(member.role);
+        }
+      }
+    };
+    getUserRole();
+  }, [supabase]);
+
+  let menuItems = adminMenuItems;
+  if (userRole && adminRoles.includes(userRole)) {
+    menuItems = adminMenuItems;
+  } else if (userRole && franchiseRoles.includes(userRole)) {
+    menuItems = franchiseMenuItems;
+  } else if (userRole === "advertiser") {
+    menuItems = advertiserMenuItems;
+  }
 
   function isActive(href: string) {
     return pathname === href || pathname.startsWith(href + "/");

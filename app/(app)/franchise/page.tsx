@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { format } from "date-fns";
 import {
   Monitor,
   Megaphone,
@@ -126,21 +127,6 @@ export default async function FranchisePage() {
         .order("ads(created_at)", { ascending: false })
     : { data: [] };
 
-  const statusConfig = {
-    approved: {
-      color: "bg-emerald-100 text-emerald-700 border-emerald-200",
-      icon: CheckCircle,
-    },
-    pending: {
-      color: "bg-amber-50 text-amber-700 border-amber-200",
-      icon: Clock,
-    },
-    rejected: {
-      color: "bg-red-50 text-red-700 border-red-200",
-      icon: XCircle,
-    },
-  };
-
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -222,7 +208,7 @@ export default async function FranchisePage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {new Date(screen.created_at).toLocaleDateString()}
+                          {format(new Date(screen.created_at), "MMM d, yyyy")}
                         </TableCell>
                       </TableRow>
                     ))}

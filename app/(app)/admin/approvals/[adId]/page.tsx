@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
 
 interface ApprovalPageProps {
   params: Promise<{ adId: string }>;
@@ -76,7 +77,7 @@ export default async function ApprovalPage({ params }: ApprovalPageProps) {
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Submitted</p>
               <p className="mt-1 text-sm text-foreground">
-                {new Date(ad.created_at).toLocaleDateString()}
+                {format(new Date(ad.created_at), "MMM d, yyyy")}
               </p>
             </div>
             <div>

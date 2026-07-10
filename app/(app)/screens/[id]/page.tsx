@@ -43,12 +43,27 @@ export default async function ScreenDetailPage({
     .eq("screen_id", id)
     .order("created_at", { ascending: false });
 
+  // Fetch latest GPS location from screen_locations for bus/auto screens
+  let latestGpsLocation: { latitude: number; longitude: number; recorded_at: string; accuracy?: number } | null = null;
+  if (screen.screen_type === "bus" || screen.screen_type === "auto") {
+    const { data: gpsRecords } = await supabase
+      .from("screen_locations")
+      .select("latitude, longitude, recorded_at, accuracy")
+      .eq("screen_id", id)
+      .order("recorded_at", { ascending: false })
+      .limit(1);
+    if (gpsRecords && gpsRecords.length > 0) {
+      latestGpsLocation = gpsRecords[0];
+    }
+  }
+
   return (
     <ScreenDetail
       screen={screen}
       groups={groups ?? []}
       schedules={schedules ?? []}
       orgId={member.org_id}
+      latestGpsLocation={latestGpsLocation}
     />
   );
 }

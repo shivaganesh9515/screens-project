@@ -57,7 +57,9 @@ export default function PlayerPage({ params }: { params: Promise<{ token: string
   const playlistRef = useRef<PlaylistItemData[]>([]);
   const playStartTimeRef = useRef<string>("");
   const gpsWatchIdRef = useRef<number | null>(null);
-  const gpsPositionRef = useRef<{ latitude: number; longitude: number } | null>(null);
+  const gpsPositionRef = useRef<{ latitude: number; longitude: number; accuracy?: number } | null>(null);
+  const screenTokenRef = useRef<string | null>(null);
+  const maxHeartbeatRetries = 3;
 
   useEffect(() => { playlistRef.current = playlist; }, [playlist]);
 
@@ -65,9 +67,11 @@ export default function PlayerPage({ params }: { params: Promise<{ token: string
   useEffect(() => {
     const storedId = localStorage.getItem("screen_id");
     const storedType = localStorage.getItem("screen_type");
+    const storedToken = localStorage.getItem("screen_token");
     if (storedId) {
       setScreenId(storedId);
       if (storedType) setScreenType(storedType);
+      if (storedToken) screenTokenRef.current = storedToken;
       setPaired(true);
     }
   }, []);
@@ -122,8 +126,13 @@ export default function PlayerPage({ params }: { params: Promise<{ token: string
       const data = await res.json();
       const sid = data.screen.id;
       const stype = data.screen.screen_type;
+      const stoken = data.screen.unique_number;
       localStorage.setItem("screen_id", sid);
       if (stype) localStorage.setItem("screen_type", stype);
+      if (stoken) {
+        localStorage.setItem("screen_token", stoken);
+        screenTokenRef.current = stoken;
+      }
       setScreenId(sid);
       setScreenType(stype);
       setPaired(true);
@@ -199,29 +208,63 @@ export default function PlayerPage({ params }: { params: Promise<{ token: string
     if (!screenId) return;
     const payload: Record<string, any> = { screen_id: screenId };
 
+    // Include auth token if available
+    if (screenTokenRef.current) {
+      payload.token = screenTokenRef.current;
+    }
+
     // Include GPS position if available (bus/auto screens)
     const gpsPos = gpsPositionRef.current;
     if (gpsPos) {
       payload.latitude = gpsPos.latitude;
       payload.longitude = gpsPos.longitude;
+      if (gpsPos.accuracy != null) {
+        payload.accuracy = gpsPos.accuracy;
+      }
     }
 
-    try {
-      const res = await fetch("/api/screens/heartbeat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      setOffline(!res.ok);
-      if (playLogBuffer.current.length > 0) {
+    // Attempt heartbeat with retry logic
+    for (let attempt = 0; attempt <= maxHeartbeatRetries; attempt++) {
+      try {
+        const res = await fetch("/api/screens/heartbeat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          setOffline(false);
+          break; // success — skip the offline=true below
+        }
+        // Server returned error — retry unless it's a 4xx (client error)
+        if (res.status >= 400 && res.status < 500) {
+          setOffline(true);
+          return; // don't retry client errors
+        }
+      } catch {
+        // Network error — will retry
+      }
+
+      // Exponential backoff: 1s, 2s, 4s, 8s (skip sleep after last attempt)
+      if (attempt < maxHeartbeatRetries) {
+        const delay = Math.min(1000 * Math.pow(2, attempt), 8000);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+
+    // After all retries exhausted, mark as offline
+    setOffline(true);
+
+    // Flush play logs
+    if (playLogBuffer.current.length > 0) {
+      try {
         await fetch("/api/play-logs", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(playLogBuffer.current),
         });
         playLogBuffer.current = [];
-      }
-    } catch { setOffline(true); }
+      } catch { /* silent */ }
+    }
   }, [screenId]);
 
   // Start GPS tracking for bus/auto screens
@@ -238,16 +281,43 @@ export default function PlayerPage({ params }: { params: Promise<{ token: string
       return;
     }
 
+    const isValidCoordinate = (lat: number, lng: number): boolean => {
+      // Reject out-of-bounds
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return false;
+      // Reject (0,0) — sentinel/unset location
+      if (lat === 0 && lng === 0) return false;
+      return true;
+    };
+
     // Start watching position
     gpsWatchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        if (!isValidCoordinate(lat, lng)) {
+          console.warn("[Player] GPS rejected invalid coordinate:", lat, lng);
+          return;
+        }
         gpsPositionRef.current = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
+          latitude: lat,
+          longitude: lng,
+          accuracy: position.coords.accuracy,
         };
       },
       (error) => {
-        console.warn("[Player] GPS error:", error.message);
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            console.warn("[Player] GPS permission denied — location will not be tracked");
+            break;
+          case error.POSITION_UNAVAILABLE:
+            console.warn("[Player] GPS position unavailable (indoor or obstructed)");
+            break;
+          case error.TIMEOUT:
+            console.warn("[Player] GPS request timed out");
+            break;
+          default:
+            console.warn("[Player] GPS error:", error.message);
+        }
       },
       {
         enableHighAccuracy: true,
